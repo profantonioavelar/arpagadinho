@@ -77,7 +77,7 @@
       try {
         const [expRes, qrRes] = await Promise.all([
           fetch(`/api/experiences/${encodeURIComponent(id)}`),
-          fetch(`/api/qrcode/${encodeURIComponent(id)}`)
+          fetch(`/api/qrcode/${encodeURIComponent(id)}?base=${encodeURIComponent(window.location.origin)}`)
         ]);
 
         if (!expRes.ok || !qrRes.ok) throw new Error('Falha ao carregar dados do cartão.');

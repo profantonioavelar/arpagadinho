@@ -659,7 +659,7 @@ async function fetchAndRenderQr(id, protocol = 'https') {
 
   try {
     dom.qrTargetUrl.textContent = 'Carregando link...';
-    const res = await fetch(`/api/qrcode/${encodeURIComponent(id)}?protocol=${protocol}`);
+    const res = await fetch(`/api/qrcode/${encodeURIComponent(id)}?protocol=${protocol}&base=${encodeURIComponent(window.location.origin)}`);
     if (!res.ok) throw new Error('Erro ao gerar QR Code');
 
     const data = await res.json();
@@ -667,7 +667,7 @@ async function fetchAndRenderQr(id, protocol = 'https') {
     dom.qrTargetUrl.textContent = data.targetUrl;
 
     // Links de ação
-    dom.btnDownloadQrPng.href = `/api/qrcode/${encodeURIComponent(id)}?format=png&protocol=${protocol}`;
+    dom.btnDownloadQrPng.href = `/api/qrcode/${encodeURIComponent(id)}?format=png&protocol=${protocol}&base=${encodeURIComponent(window.location.origin)}`;
     dom.btnDownloadQrPng.download = `qrcode-${id}.png`;
 
     dom.btnOpenPrintCard.href = `/print.html?id=${encodeURIComponent(id)}`;

@@ -367,9 +367,20 @@ app.get('/api/qrcode/:id', async (req, res) => {
   
   let origin = base;
   if (!origin) {
-    const proto = protocol || 'https';
-    const port = proto === 'https' ? HTTPS_PORT : HTTP_PORT;
-    origin = `${proto}://${localIp}:${port}`;
+    if (process.env.RENDER_EXTERNAL_URL) {
+      origin = process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '');
+    } else {
+      const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
+      const forwardedProto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : (req.protocol || 'http'));
+      
+      if (forwardedHost && !forwardedHost.includes('localhost') && !forwardedHost.startsWith('127.') && !forwardedHost.startsWith('10.') && !forwardedHost.startsWith('192.168.')) {
+        origin = `${forwardedProto}://${forwardedHost}`;
+      } else {
+        const proto = protocol || 'https';
+        const port = proto === 'https' ? HTTPS_PORT : HTTP_PORT;
+        origin = `${proto}://${localIp}:${port}`;
+      }
+    }
   }
 
   const targetUrl = `${origin}/view.html?id=${encodeURIComponent(id)}`;
@@ -401,10 +412,11 @@ app.get('/api/qrcode/:id', async (req, res) => {
     res.json({
       targetUrl,
       qrDataUrl,
+      origin,
       localIp,
-      httpsUrl: `https://${localIp}:${HTTPS_PORT}/view.html?id=${encodeURIComponent(id)}`,
-      httpUrl: `http://${localIp}:${HTTP_PORT}/view.html?id=${encodeURIComponent(id)}`,
-      desktopUrl: `http://localhost:${HTTP_PORT}/view.html?id=${encodeURIComponent(id)}`
+      httpsUrl: `${origin}/view.html?id=${encodeURIComponent(id)}`,
+      httpUrl: `${origin}/view.html?id=${encodeURIComponent(id)}`,
+      desktopUrl: `${origin}/view.html?id=${encodeURIComponent(id)}`
     });
   } catch (err) {
     console.error('Erro ao gerar QR Code:', err);

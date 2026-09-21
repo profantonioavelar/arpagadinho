@@ -753,7 +753,7 @@ async function startBatchProcessing() {
       student.status = 'compiled';
 
       // 4. Obter QR Code
-      const qrRes = await fetch(`/api/qrcode/${expData.id}`);
+      const qrRes = await fetch(`/api/qrcode/${expData.id}?base=${encodeURIComponent(window.location.origin)}`);
       const qrData = await qrRes.json();
       student.qrDataUrl = qrData.qrDataUrl;
       student.targetUrl = qrData.targetUrl;

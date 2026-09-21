@@ -434,7 +434,7 @@
           .then(async (exps) => {
             const items = [];
             for (const exp of exps) {
-              const qrRes = await fetch(`/api/qrcode/${exp.id}`);
+              const qrRes = await fetch(`/api/qrcode/${exp.id}?base=${encodeURIComponent(window.location.origin)}`);
               const qrData = await qrRes.json();
               items.push({
                 studentName: exp.title,
@@ -448,6 +448,33 @@
             renderSheets();
           });
       } else {
+        renderSheets();
+        refreshQRCodesIfNeeded();
+      }
+    }
+
+    async function refreshQRCodesIfNeeded() {
+      const currentOrigin = window.location.origin;
+      let needReRender = false;
+      for (const item of (printData.items || [])) {
+        if (item.targetUrl && !item.targetUrl.startsWith(currentOrigin)) {
+          const match = item.targetUrl.match(/id=([^&]+)/);
+          if (match && match[1]) {
+            try {
+              const res = await fetch(`/api/qrcode/${match[1]}?base=${encodeURIComponent(currentOrigin)}`);
+              if (res.ok) {
+                const data = await res.json();
+                item.qrDataUrl = data.qrDataUrl;
+                item.targetUrl = data.targetUrl;
+                needReRender = true;
+              }
+            } catch (e) {
+              console.warn('Erro ao atualizar QR code:', e);
+            }
+          }
+        }
+      }
+      if (needReRender) {
         renderSheets();
       }
     }
