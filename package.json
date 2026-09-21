@@ -1,0 +1,32 @@
+{
+  "name": "eyejack-webar-platform",
+  "version": "1.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "dev:https": "node server.js --https",
+    "generate-certs": "node generate-certs.js",
+    "test": "node test-e2e.js",
+    "tunnel": "npx cloudflared tunnel --url http://localhost:3000"
+  },
+  "keywords": [
+    "webar",
+    "augmented-reality",
+    "mindar",
+    "aframe",
+    "eyejack"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "qrcode": "^1.5.4",
+    "selfsigned": "^5.5.0"
+  }
+}

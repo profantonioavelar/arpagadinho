@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plaquinhas da Exposição - Impressão da Turma | Projeto UBUNTU</title>
+  <link rel="icon" href="/assets/mascote_apagadinho.png">
+  <style>
+    :root {
+      --font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-family: var(--font-family);
+      padding: 1.5rem 1rem;
+      min-height: 100vh;
+    }
+
+    /* Barra de Ações Superior (Ocultada na impressão) */
+    .no-print-bar {
+      max-width: 1100px;
+      margin: 0 auto 1.5rem auto;
+      background: #ffffff;
+      padding: 1rem 1.5rem;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.6rem 1.1rem;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      text-decoration: none;
+      font-family: inherit;
+      white-space: nowrap;
+    }
+
+    .btn-primary {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+    .btn-primary:hover {
+      background: #4338ca;
+    }
+
+    .btn-secondary {
+      background: #f8fafc;
+      color: #334155;
+      border-color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    .input-edit {
+      padding: 0.4rem 0.6rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-family: inherit;
+    }
+
+    /* Folha A4 para Impressão */
+    .a4-sheet {
+      width: 210mm;
+      min-height: 297mm;
+      padding: 8mm 8mm;
+      margin: 0 auto 2rem auto;
+      background: #ffffff;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Grades de Plaquinhas */
+    .labels-grid {
+      display: grid;
+      gap: 6mm;
+      flex: 1;
+      height: 100%;
+    }
+
+    /* Formato 4 por folha (2 colunas x 2 linhas) */
+    .grid-layout-4 {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+    }
+
+    /* Formato 6 por folha (2 colunas x 3 linhas) */
+    .grid-layout-6 {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 4mm;
+    }
+
+    /* Cartão individual de plaquinha - Modelo Oficial da Mostra */
+    .label-card {
+      border: 1.5px dashed #0f172a;
+      border-radius: 4px;
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background: #ffffff;
+      position: relative;
+      box-sizing: border-box;
+      height: 100%;
+    }
+
+    /* Linhas e tesourinha de corte */
+    .cut-guide {
+      position: absolute;
+      top: 3px;
+      right: 6px;
+      font-size: 0.62rem;
+      color: #94a3b8;
+      pointer-events: none;
+    }
+
+    /* Cabeçalho do Cartão */
+    .card-top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .card-title-group {
+      text-align: center;
+      flex: 1;
+      padding-left: 25px; /* Compensa o bloco da sala para centralizar o título */
+    }
+
+    .card-expo-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #000000;
+      line-height: 1.15;
+    }
+
+    .card-school-year {
+      font-size: 1.15rem;
+      font-weight: 600;
+      color: #000000;
+      line-height: 1.2;
+      margin-top: 2px;
+    }
+
+    .card-student-tag {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #4338ca;
+      margin-top: 3px;
+    }
+
+    .card-room-group {
+      text-align: center;
+      min-width: 45px;
+    }
+
+    .card-room-label {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #000000;
+      line-height: 1.1;
+    }
+
+    .card-room-number {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #000000;
+      line-height: 1.1;
+      margin-top: 2px;
+    }
+
+    /* Seção Central com QR Code e Instruções */
+    .card-qr-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      margin: 4px 0;
+    }
+
+    .grid-layout-4 .card-qr-img {
+      width: 86px;
+      height: 86px;
+      object-fit: contain;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 2px;
+    }
+
+    .grid-layout-6 .card-qr-img {
+      width: 68px;
+      height: 68px;
+      object-fit: contain;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      padding: 2px;
+    }
+
+    .card-instructions {
+      font-size: 0.65rem;
+      line-height: 1.35;
+      color: #334155;
+      max-width: 230px;
+      margin: 4px auto 0 auto;
+      text-align: center;
+    }
+
+    .grid-layout-6 .card-instructions {
+      font-size: 0.58rem;
+      line-height: 1.25;
+      max-width: 200px;
+    }
+
+    /* Moldura da Arte / Desenho da Criança */
+    .card-art-frame {
+      position: relative;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 8px;
+      background: #f8fafc;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .grid-layout-4 .card-art-frame {
+      height: 110px;
+      margin: 6px 0;
+    }
+
+    .grid-layout-6 .card-art-frame {
+      height: 82px;
+      margin: 4px 0;
+    }
+
+    .card-art-img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      transition: transform 0.2s ease;
+    }
+
+    /* Botão de Girar Imagem da Plaquinha */
+    .btn-rotate-mini {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      background: rgba(15, 23, 42, 0.75);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      backdrop-filter: blur(4px);
+      z-index: 5;
+      transition: all 0.2s;
+    }
+
+    .btn-rotate-mini:hover {
+      background: #4f46e5;
+    }
+
+    /* Rodapé do Cartão */
+    .card-footer-text {
+      font-size: 0.6rem;
+      color: #94a3b8;
+      text-align: center;
+      padding-top: 2px;
+    }
+
+    /* Regras de Impressão */
+    @media print {
+      body {
+        background: #ffffff !important;
+        padding: 0 !important;
+      }
+
+      .no-print-bar, .btn-rotate-mini {
+        display: none !important;
+      }
+
+      .a4-sheet {
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 8mm 8mm !important;
+        page-break-after: always;
+        break-after: page;
+      }
+
+      .label-card {
+        border: 1.5px dashed #000000 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra de Controle Superior (Não é impressa) -->
+  <div class="no-print-bar">
+    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+      <a href="/studio.html#modo-escolar" class="btn btn-secondary">
+        ← Voltar ao Estúdio
+      </a>
+      <span id="total-labels-info" style="font-size: 0.9rem; font-weight: 600; color: #475569;">
+        Carregando plaquinhas...
+      </span>
+    </div>
+
+    <!-- Controles Rápidos de Cabeçalho do Cartão -->
+    <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+      <div>
+        <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block;">Tema:</label>
+        <input type="text" id="input-expo-name" value="Projeto UBUNTU" class="input-edit" style="width: 130px;" oninput="updateCardCustoms()">
+      </div>
+
+      <div>
+        <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block;">Escola/Ano:</label>
+        <input type="text" id="input-school-name" value="EMJPa - 2026" class="input-edit" style="width: 115px;" oninput="updateCardCustoms()">
+      </div>
+
+      <div>
+        <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block;">Sala:</label>
+        <input type="text" id="input-default-room" value="12" class="input-edit" style="width: 55px;" oninput="updateCardCustoms()">
+      </div>
+
+      <div>
+        <label style="font-size: 0.72rem; font-weight: 700; color: #475569; display: block;">Layout:</label>
+        <select id="select-print-layout" onchange="renderSheets()" class="input-edit">
+          <option value="4" selected>4 por folha</option>
+          <option value="6">6 por folha</option>
+        </select>
+      </div>
+
+      <button type="button" class="btn btn-secondary" onclick="rotateAllImages()" title="Girar todas as fotos das artes em 90°" style="margin-top: 14px;">
+        🔄 Girar Fotos 90°
+      </button>
+
+      <button onclick="window.print()" class="btn btn-primary" style="margin-top: 14px;">
+        🖨️ Imprimir (Ctrl + P)
+      </button>
+    </div>
+  </div>
+
+  <!-- Container onde as folhas A4 serão geradas dinamicamente -->
+  <div id="sheets-container"></div>
+
+  <script>
+    let printData = {
+      schoolName: 'EMJPa - 2026',
+      expoName: 'Projeto UBUNTU',
+      defaultRoom: '12',
+      instructions: '1. Aponte a câmera para o QR Code. 2. Permita a câmera. 3. Enquadre o desenho e veja a mágica!',
+      showThumb: true,
+      rotations: {},
+      items: []
+    };
+
+    function updateCardCustoms() {
+      printData.expoName = document.getElementById('input-expo-name').value.trim() || 'Projeto UBUNTU';
+      printData.schoolName = document.getElementById('input-school-name').value.trim() || 'EMJPa - 2026';
+      printData.defaultRoom = document.getElementById('input-default-room').value.trim() || '12';
+      renderSheets();
+    }
+
+    function rotateCardImage(index) {
+      const current = printData.rotations[index] || 0;
+      const next = (current + 90) % 360;
+      printData.rotations[index] = next;
+      const img = document.getElementById(`art-img-${index}`);
+      if (img) {
+        img.style.transform = `rotate(${next}deg)`;
+      }
+    }
+
+    function rotateAllImages() {
+      const items = printData.items || [];
+      const currentFirst = printData.rotations[0] || 0;
+      const next = (currentFirst + 90) % 360;
+      items.forEach((_, idx) => {
+        printData.rotations[idx] = next;
+        const img = document.getElementById(`art-img-${idx}`);
+        if (img) img.style.transform = `rotate(${next}deg)`;
+      });
+    }
+
+    function loadData() {
+      // 1. Tentar ler do localStorage (gerado pelo Modo Escolar do estúdio)
+      const stored = localStorage.getItem('eyejack_school_print_data');
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed && parsed.items && parsed.items.length > 0) {
+            printData.items = parsed.items;
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      // Se não houver itens cadastrados, carregar do servidor para teste/demonstração
+      if (!printData.items || printData.items.length === 0) {
+        fetch('/api/experiences')
+          .then(r => r.json())
+          .then(async (exps) => {
+            const items = [];
+            for (const exp of exps) {
+              const qrRes = await fetch(`/api/qrcode/${exp.id}`);
+              const qrData = await qrRes.json();
+              items.push({
+                studentName: exp.title,
+                studentClass: '12',
+                artImageUrl: exp.targetImageUrl,
+                qrDataUrl: qrData.qrDataUrl,
+                targetUrl: qrData.targetUrl
+              });
+            }
+            printData.items = items;
+            renderSheets();
+          });
+      } else {
+        renderSheets();
+      }
+    }
+
+    function renderSheets() {
+      const container = document.getElementById('sheets-container');
+      const layoutType = parseInt(document.getElementById('select-print-layout').value) || 4;
+      const items = printData.items || [];
+
+      document.getElementById('total-labels-info').textContent = 
+        `${items.length} plaquinha(s) • ${Math.ceil(items.length / layoutType)} folha(s) A4`;
+
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = '<div style="text-align:center; padding: 3rem; color: #64748b;">Nenhum aluno carregado para impressão.</div>';
+        return;
+      }
+
+      // Dividir itens em grupos por folha A4 (4 ou 6 itens por folha)
+      // SEM cabeçalho de folha redundante, aproveitando 100% da área útil
+      for (let i = 0; i < items.length; i += layoutType) {
+        const pageItems = items.slice(i, i + layoutType);
+        const sheetEl = document.createElement('div');
+        sheetEl.className = 'a4-sheet';
+
+        sheetEl.innerHTML = `
+          <div class="labels-grid grid-layout-${layoutType}">
+            ${pageItems.map((item, localIdx) => createLabelHtml(item, i + localIdx)).join('')}
+          </div>
+        `;
+
+        container.appendChild(sheetEl);
+      }
+    }
+
+    function extractRoomNumber(studentClass) {
+      if (!studentClass) return printData.defaultRoom || '12';
+      const match = String(studentClass).match(/\d+/);
+      if (match) return match[0];
+      return String(studentClass).trim();
+    }
+
+    function createLabelHtml(item, index) {
+      const roomNumber = extractRoomNumber(item.studentClass);
+      const rotation = printData.rotations[index] || 0;
+      const studentName = item.studentName && item.studentName !== 'Cartão Postal Futurista (Vídeo + Objeto 3D)' && item.studentName !== 'Guaxinim Ilustrado (Demonstração)'
+        ? item.studentName
+        : '';
+
+      return `
+        <div class="label-card">
+          <div class="cut-guide">✂ recortar</div>
+
+          <!-- Cabeçalho do Cartão -->
+          <div class="card-top-row">
+            <div class="card-title-group">
+              <div class="card-expo-title">${escapeHtml(printData.expoName || 'Projeto UBUNTU')}</div>
+              <div class="card-school-year">${escapeHtml(printData.schoolName || 'EMJPa - 2026')}</div>
+              ${studentName ? `<div class="card-student-tag">${escapeHtml(studentName)}</div>` : ''}
+            </div>
+
+            <div class="card-room-group">
+              <div class="card-room-label">SALA</div>
+              <div class="card-room-number">${escapeHtml(roomNumber)}</div>
+            </div>
+          </div>
+
+          <!-- Seção Central do QR Code e Instruções -->
+          <div class="card-qr-section">
+            <img src="${item.qrDataUrl}" alt="QR Code" class="card-qr-img">
+            <div class="card-instructions">
+              ${escapeHtml(printData.instructions)}
+            </div>
+          </div>
+
+          <!-- Moldura do Desenho Alvo com Botão de Girar -->
+          <div class="card-art-frame">
+            <button type="button" class="btn-rotate-mini no-print" onclick="rotateCardImage(${index})" title="Clique para girar esta foto em 90°">
+              🔄 Girar 90°
+            </button>
+            <img src="${item.artImageUrl}" alt="Desenho" class="card-art-img" id="art-img-${index}" style="transform: rotate(${rotation}deg);">
+          </div>
+
+          <!-- Rodapé -->
+          <div class="card-footer-text">
+            🎨 ARpagadinho • Realidade Aumentada
+          </div>
+        </div>
+      `;
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    document.addEventListener('DOMContentLoaded', loadData);
+  </script>
+</body>
+</html>

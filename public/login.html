@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARpagadinho — Login da Confecção</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/assets/mascote_apagadinho.png">
+  <style>
+    .login-container {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem 2rem;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(99, 102, 241, 0.15);
+      text-align: center;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mascot-avatar {
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 1.25rem;
+      position: relative;
+    }
+
+    .mascot-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 8px 20px rgba(236, 72, 153, 0.45));
+      animation: gentleBounce 3s ease-in-out infinite;
+    }
+
+    @keyframes gentleBounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+
+    .login-title {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: #ffffff;
+      margin-bottom: 0.35rem;
+      letter-spacing: -0.02em;
+    }
+
+    .login-subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      margin-bottom: 2rem;
+      line-height: 1.4;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 1.25rem;
+    }
+
+    .form-label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 0.4rem;
+      letter-spacing: 0.02em;
+    }
+
+    .form-input {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0.85rem 1rem;
+      font-size: 1rem;
+      color: #ffffff;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+      background: rgba(15, 23, 42, 0.95);
+    }
+
+    .btn-submit {
+      width: 100%;
+      padding: 0.95rem;
+      font-size: 1.05rem;
+      font-weight: 700;
+      border-radius: var(--radius-md);
+      margin-top: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .alert-box {
+      display: none;
+      background: rgba(239, 68, 68, 0.15);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+      padding: 0.75rem 1rem;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      margin-bottom: 1.25rem;
+      text-align: left;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-top: 1.75rem;
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover {
+      color: var(--primary);
+    }
+
+    .badge-lock {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      color: #a5b4fc;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="login-container">
+    <div class="login-card">
+      <div class="mascot-avatar">
+        <img src="/assets/mascote_apagadinho.png" alt="Apagadinho">
+      </div>
+
+      <div class="badge-lock">
+        <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2" stroke-width="2"/>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4" stroke-width="2"/>
+        </svg>
+        <span>Área Restrita do Professor</span>
+      </div>
+
+      <h1 class="login-title">ARpagadinho</h1>
+      <p class="login-subtitle">Acesso exclusivo para confecção dos cartões, gravação de vídeos e gestão da mostra</p>
+
+      <div id="alert-error" class="alert-box">
+        <strong>Erro:</strong> Login ou senha incorretos.
+      </div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label" for="login-username">Matrícula / Usuário</label>
+          <input 
+            type="text" 
+            id="login-username" 
+            class="form-input" 
+            placeholder="Digite o seu login" 
+            required 
+            autofocus
+            autocomplete="username"
+          >
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="login-password">Senha de Acesso</label>
+          <input 
+            type="password" 
+            id="login-password" 
+            class="form-input" 
+            placeholder="Digite sua senha" 
+            required
+            autocomplete="current-password"
+          >
+        </div>
+
+        <button type="submit" id="btn-submit" class="btn btn-primary btn-submit">
+          <span>Entrar no Estúdio</span>
+          <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+          </svg>
+        </button>
+      </form>
+
+      <a href="/" class="back-link">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+        </svg>
+        <span>Voltar para a Mostra dos Pais (Projeto UBUNTU)</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    // Se já estiver autenticado, redireciona direto para o Studio
+    fetch('/api/auth/check')
+      .then(r => r.json())
+      .then(data => {
+        if (data.authenticated) {
+          const params = new URLSearchParams(window.location.search);
+          window.location.href = params.get('redirect') || '/studio.html';
+        }
+      })
+      .catch(() => {});
+
+    const form = document.getElementById('login-form');
+    const alertError = document.getElementById('alert-error');
+    const btnSubmit = document.getElementById('btn-submit');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      alertError.style.display = 'none';
+
+      const username = document.getElementById('login-username').value.trim();
+      const password = document.getElementById('login-password').value.trim();
+
+      btnSubmit.disabled = true;
+      btnSubmit.innerHTML = '<span>Entrando...</span>';
+
+      try {
+        const response = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+          btnSubmit.innerHTML = '<span>Sucesso! Redirecionando...</span>';
+          btnSubmit.style.background = '#10b981';
+          const params = new URLSearchParams(window.location.search);
+          const redirect = params.get('redirect') || '/studio.html';
+          setTimeout(() => {
+            window.location.href = redirect;
+          }, 400);
+        } else {
+          alertError.textContent = data.error || 'Login ou senha incorretos. Tente novamente.';
+          alertError.style.display = 'block';
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<span>Entrar no Estúdio</span>';
+        }
+      } catch (err) {
+        alertError.textContent = 'Erro ao conectar ao servidor. Verifique se o ARpagadinho está em execução.';
+        alertError.style.display = 'block';
+        btnSubmit.disabled = false;
+        btnSubmit.innerHTML = '<span>Entrar no Estúdio</span>';
+      }
+    });
+  </script>
+</body>
+</html>

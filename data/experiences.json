@@ -1,0 +1,36 @@
+[
+  {
+    "id": "demo-card-tech",
+    "title": "Cartão Postal Futurista (Vídeo + Objeto 3D)",
+    "description": "Exemplo híbrido: Apresentação em vídeo na parede com um Cristal Ubuntu 3D flutuando à frente.",
+    "targetImageUrl": "/samples/sample-1/image.jpg",
+    "overlayVideoUrl": "/samples/sample-1/video.mp4",
+    "mindTargetUrl": "/samples/sample-1/targets.mind",
+    "model3dUrl": "/samples/sample-3d/cristal.glb",
+    "model3dScale": "0.38 0.38 0.38",
+    "targetWidth": 674,
+    "targetHeight": 372,
+    "aspectRatio": 0.5519287833827893,
+    "fitMode": "match",
+    "loop": true,
+    "audioDefault": "muted",
+    "isDemo": true,
+    "createdAt": "2026-09-20T02:08:06.086Z"
+  },
+  {
+    "id": "demo-raccoon-art",
+    "title": "Guaxinim Ilustrado (Demonstração)",
+    "description": "Pôster quadrado artístico com animação fluida alinhada ao marcador.",
+    "targetImageUrl": "/samples/sample-2/image.jpg",
+    "overlayVideoUrl": "/samples/sample-2/video.mp4",
+    "mindTargetUrl": "/samples/sample-2/targets.mind",
+    "targetWidth": 1654,
+    "targetHeight": 1654,
+    "aspectRatio": 1,
+    "fitMode": "match",
+    "loop": true,
+    "audioDefault": "muted",
+    "isDemo": true,
+    "createdAt": "2026-09-20T01:08:06.088Z"
+  }
+]

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartão de Teste WebAR - ARpagadinho</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/assets/mascote_apagadinho.png">
+</head>
+<body class="print-page">
+
+  <!-- Barra de Ações Rápidas (Ocultada na impressão) -->
+  <div class="no-print" style="width: 100%; max-width: 780px; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+    <a href="/studio.html" class="btn btn-secondary btn-sm">
+      ← Voltar ao Estúdio
+    </a>
+    <div style="display: flex; gap: 0.75rem;">
+      <a id="btn-view-ar" href="#" target="_blank" class="btn btn-secondary btn-sm">
+        📱 Abrir WebAR
+      </a>
+      <button onclick="window.print()" class="btn btn-primary btn-sm">
+        🖨️ Imprimir Cartão
+      </button>
+    </div>
+  </div>
+
+  <!-- Cartão Físico Formatado (Ideal para Cartão Postal / A4) -->
+  <div class="print-card-box">
+    <div class="print-header">
+      <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem; margin-bottom: 0.25rem;">
+        <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 44px; height: 44px; object-fit: contain;">
+        <span style="font-size: 1.35rem; font-weight: 800; color: #0f172a;">ARpagadinho</span>
+        <span style="font-size: 0.7rem; font-weight: 700; background: #6366f1; color: #ffffff; padding: 0.15rem 0.4rem; border-radius: 4px;">WebAR</span>
+      </div>
+      <h1 id="card-title" style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0;">Carregando Experiência...</h1>
+      <p id="card-description" style="font-size: 0.9rem; color: #475569; margin: 0;">Posicione a câmera do smartphone sobre a arte abaixo.</p>
+    </div>
+
+    <div class="print-content-row">
+      <!-- Arte Marcadora Física -->
+      <div style="text-align: center;">
+        <img id="card-art-img" class="print-target-art" src="" alt="Arte Física Marcadora">
+        <p style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">▲ Imagem Marcadora Alvo (Targets.mind)</p>
+      </div>
+
+      <!-- Seção do QR Code e Instruções -->
+      <div class="print-qr-section">
+        <img id="card-qr-img" class="print-qr-img" src="" alt="QR Code de Escaneamento">
+        <strong style="font-size: 0.95rem; color: #0f172a;">Escanear para Ver a Arte Ganhar Vida</strong>
+
+        <div class="print-steps">
+          <ol style="padding-left: 1.25rem; line-height: 1.6;">
+            <li>Abra a câmera do seu smartphone e escaneie o <strong>QR Code</strong> acima.</li>
+            <li>Toque no link para abrir o visualizador no navegador.</li>
+            <li>Permita o acesso à câmera quando solicitado.</li>
+            <li>Enquadre a <strong>imagem ao lado</strong> e veja a animação surgir!</li>
+          </ol>
+        </div>
+
+        <div style="font-size: 0.7rem; color: #94a3b8; margin-top: 0.5rem;">
+          Sem necessidade de baixar aplicativo • Compatível com iOS e Android
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    async function loadCardData() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const id = urlParams.get('id');
+
+      if (!id) {
+        document.getElementById('card-title').textContent = 'Experiência não informada';
+        return;
+      }
+
+      try {
+        const [expRes, qrRes] = await Promise.all([
+          fetch(`/api/experiences/${encodeURIComponent(id)}`),
+          fetch(`/api/qrcode/${encodeURIComponent(id)}`)
+        ]);
+
+        if (!expRes.ok || !qrRes.ok) throw new Error('Falha ao carregar dados do cartão.');
+
+        const exp = await expRes.json();
+        const qr = await qrRes.json();
+
+        document.getElementById('card-title').textContent = exp.title;
+        document.getElementById('card-description').textContent = exp.description || 'Experiência de Realidade Aumentada física com animação sobreposta.';
+        document.getElementById('card-art-img').src = exp.targetImageUrl;
+        document.getElementById('card-qr-img').src = qr.qrDataUrl;
+        document.getElementById('btn-view-ar').href = `/view.html?id=${encodeURIComponent(id)}`;
+      } catch (err) {
+        console.error(err);
+        document.getElementById('card-title').textContent = 'Erro ao carregar dados';
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', loadCardData);
+  </script>
+</body>
+</html>

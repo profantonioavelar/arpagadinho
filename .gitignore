@@ -1,0 +1,5 @@
+node_modules/
+public/ARpagadinho*
+ssl/*.pem
+*.log
+.DS_Store

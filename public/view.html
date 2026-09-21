@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>ARpagadinho WebAR Viewer</title>
+
+  <!-- A-Frame 1.5.0 e MindAR 1.2.5 Image Tracking -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+
+  <link rel="stylesheet" href="/css/styles.css">
+  <link rel="icon" href="/assets/mascote_apagadinho.png">
+
+  <style>
+    /* Estilos específicos para visualização imersiva em tela cheia */
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000000;
+    }
+
+    .a-canvas {
+      position: fixed !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 100vw !important;
+      height: 100vh !important;
+      z-index: 1 !important;
+    }
+
+    /* Ocultar barra padrão de VR do A-Frame */
+    .a-enter-vr {
+      display: none !important;
+    }
+
+    /* Vídeo da câmera traseira em tela cheia */
+    video {
+      object-fit: cover !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Container onde a cena A-Frame será montada dinamicamente -->
+  <div id="scene-container" class="webar-container"></div>
+
+  <!-- HUD / Interface sobreposta ao WebAR -->
+  <div class="webar-hud">
+    <!-- Barra Superior -->
+    <div class="webar-top-bar">
+      <a href="/" class="floating-btn" style="padding: 0.5rem 0.9rem; font-size: 0.8rem; text-decoration: none;">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/></svg>
+        <span>Voltar</span>
+      </a>
+
+      <div id="title-badge" class="webar-title-badge" style="display: flex; align-items: center; gap: 0.5rem;">
+        <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 24px; height: 24px; object-fit: contain;">
+        <span>Carregando AR...</span>
+      </div>
+
+      <button id="btn-show-artwork" class="floating-btn" style="padding: 0.5rem 0.9rem; font-size: 0.8rem;" title="Exibir a arte original para teste na tela">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+        <span>Ver Arte</span>
+      </button>
+    </div>
+
+    <!-- Badge Central de Status do Rastreamento -->
+    <div id="status-badge" class="webar-status-badge status-hunting">
+      <span class="pulse-dot"></span>
+      <span id="status-text">🔍 Aponte a câmera para a imagem impressa</span>
+    </div>
+
+    <!-- Retículo Guia de Escaneamento com Laser -->
+    <div id="scanning-reticle" class="scanning-reticle">
+      <div class="scanning-reticle-corners"></div>
+      <div class="scanning-laser"></div>
+      <img id="reticle-thumb" src="" alt="Silhueta da Arte" style="max-width: 80%; max-height: 80%; opacity: 0.35; object-fit: contain; pointer-events: none; display: none;">
+    </div>
+
+    <!-- Barra Inferior de Controles de Mídia -->
+    <div class="webar-bottom-bar">
+      <!-- Botão de Áudio Pulsante (Resolve restrições de autoplay do Safari e Chrome móvel) -->
+      <button id="btn-audio" class="floating-btn btn-unmute-pulse">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
+        <span>🔊 Ativar Som</span>
+      </button>
+
+      <!-- Botão de Play / Pause -->
+      <button id="btn-play-pause" class="floating-btn">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Pausar</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Modal: Exibir Arte Original (Para testar apontando outro celular para a tela) -->
+  <div id="modal-artwork" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px; text-align: center;">
+      <div class="modal-header">
+        <h3 class="modal-title">Arte Marcadora Original</h3>
+        <button id="modal-artwork-close" class="modal-close" aria-label="Fechar">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1rem;">
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 1rem;">
+          Se você estiver testando sem a arte física impressa, aponte a câmera de outro dispositivo para esta tela para iniciar a Realidade Aumentada.
+        </p>
+        <img id="artwork-modal-img" src="" alt="Arte Marcadora" style="max-width: 100%; max-height: 55vh; object-fit: contain; border-radius: var(--radius-md); border: 2px solid var(--border-accent);">
+      </div>
+    </div>
+  </div>
+
+  <!-- Overlay de Erro de Câmera ou Permissões -->
+  <div id="error-overlay" style="display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 999; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; text-align: center;">
+    <div style="width: 54px; height: 54px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem;">
+      <svg width="28" height="28" fill="none" stroke="#ef4444" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+    </div>
+    <h2 style="font-size: 1.4rem; color: #ffffff; margin-bottom: 0.75rem;">Acesso à Câmera Bloqueado</h2>
+    <p id="error-message" style="color: var(--text-muted); max-width: 480px; font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">
+      O navegador não conseguiu acessar a câmera do dispositivo.
+    </p>
+    <div style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle); padding: 1rem; border-radius: var(--radius-md); text-align: left; max-width: 480px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 1.5rem;">
+      <strong>Como resolver:</strong>
+      <ul style="margin-top: 0.5rem; padding-left: 1.25rem; line-height: 1.6;">
+        <li>Navegadores móveis exigem <strong>HTTPS</strong> para abrir a câmera via Wi-Fi. Inicie o servidor com: <code style="color: var(--accent-cyan);">npm run dev:https</code></li>
+        <li>Conceda a permissão de câmera nas configurações do navegador do seu smartphone.</li>
+        <li>Se estiver testando pelo computador, verifique se a webcam está conectada e liberada.</li>
+      </ul>
+    </div>
+    <a href="/" class="btn btn-primary">Voltar ao Início</a>
+  </div>
+
+  <script src="/js/viewer.js"></script>
+</body>
+</html>

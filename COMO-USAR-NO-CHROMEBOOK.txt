@@ -1,0 +1,40 @@
+=============================================================
+   COMO COLOCAR E RODAR O ARPAGADINHO NO CHROMEBOOK
+=============================================================
+
+1. PASSAR O ARQUIVO PARA O CHROMEBOOK:
+   - Salve o arquivo 'ARpagadinho-Projeto.zip' no seu Google Drive (ou Pen Drive).
+   - No Chromebook, abra o app "Arquivos".
+   - Arraste a pasta ou o arquivo ZIP para dentro da pasta "Arquivos do Linux" (Linux files).
+   - Se for o ZIP, clique com o botão direito e selecione "Extrair tudo".
+
+2. ATIVAR O LINUX NO CHROMEBOOK (apenas se nunca usou antes):
+   - Abra as "Configurações" do Chromebook.
+   - No menu lateral esquerdo, clique em "Avançado" -> "Desenvolvedores".
+   - Ao lado de "Ambiente de desenvolvimento Linux", clique em "Ativar" e confirme.
+
+3. INICIAR O SISTEMA:
+   - Abra o app "Terminal" no Chromebook (ele tem o ícone de uma janelinha preta '>_').
+   - Digite os comandos abaixo e aperte Enter:
+
+     cd eyejack-webar-platform
+     bash iniciar-chromebook.sh
+
+   (Ou se preferir fazer manualmente: 'npm install' e depois 'npm start')
+
+4. ACESSAR O SISTEMA:
+   - Abra o navegador Chrome no Chromebook e digite na barra de endereços:
+     http://localhost:3000
+
+   - Para entrar no Estúdio do Professor:
+     http://localhost:3000/login.html
+     Usuário: 3164231
+     Senha:   3164231
+
+5. LIBERAR O LINK PARA OS CELULARES DOS PAIS:
+   - No Terminal Linux, abra uma nova aba (ou pressione Ctrl+Shift+T) e digite:
+     npx cloudflared tunnel --url http://localhost:3000
+
+   - Ele vai gerar um link seguro HTTPS (exemplo: https://algo-aleatorio.trycloudflare.com).
+   - Use esse link no Estúdio para gerar os QR Codes de impressão!
+=============================================================
