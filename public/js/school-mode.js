@@ -611,7 +611,10 @@ function startMediaRecorder() {
   if (!stream) return;
 
   const mimeType = MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm';
-  const recorder = new MediaRecorder(stream, { mimeType });
+  const recorder = new MediaRecorder(stream, {
+    mimeType,
+    videoBitsPerSecond: 1200000 // 1.2 Mbps: garante ~8 MB por minuto com excelente qualidade
+  });
 
   recorder.ondataavailable = (e) => {
     if (e.data && e.data.size > 0) {
