@@ -302,7 +302,11 @@ function renderStudentsList() {
           ${hasPhoto ? `
             <div class="media-preview-mini">
               <img src="${st.photoUrl || st.photoImg.src}" alt="Desenho">
-              <button class="btn-mini-change" onclick="window.schoolActions.openPhotoModal(${idx})">Trocar</button>
+              <div class="media-preview-actions">
+                <button type="button" class="btn-mini-action" onclick="window.schoolActions.triggerPhotoUpload(${idx})" title="Trocar arquivo de imagem">📁 Trocar</button>
+                <button type="button" class="btn-mini-action" onclick="window.schoolActions.openPhotoModal(${idx})" title="Fotografar novamente">📷 Foto</button>
+                <button type="button" class="btn-mini-action btn-mini-danger" onclick="window.schoolActions.clearPhoto(${idx})" title="Apagar desenho deste aluno">🗑️ Apagar</button>
+              </div>
             </div>
           ` : `
             <div class="btn-group-media">
@@ -322,7 +326,11 @@ function renderStudentsList() {
           ${hasVideo ? `
             <div class="media-preview-mini">
               <video src="${st.videoUrl}" controls playsinline></video>
-              <button class="btn-mini-change" onclick="window.schoolActions.openVideoModal(${idx})">Trocar</button>
+              <div class="media-preview-actions">
+                <button type="button" class="btn-mini-action" onclick="window.schoolActions.triggerVideoUpload(${idx})" title="Trocar arquivo de vídeo">📁 Trocar</button>
+                <button type="button" class="btn-mini-action" onclick="window.schoolActions.openVideoModal(${idx})" title="Gravar novamente pela câmera">🔴 Gravar</button>
+                <button type="button" class="btn-mini-action btn-mini-danger" onclick="window.schoolActions.clearVideo(${idx})" title="Apagar vídeo deste aluno">🗑️ Apagar</button>
+              </div>
             </div>
           ` : `
             <div class="btn-group-media">
@@ -366,11 +374,40 @@ window.schoolActions = {
   openVideoModal: (idx) => openLiveVideoModal(idx),
   triggerPhotoUpload: (idx) => {
     schoolState.activeStudentIndex = idx;
-    if (el.hiddenPhotoInput) el.hiddenPhotoInput.click();
+    if (el.hiddenPhotoInput) {
+      el.hiddenPhotoInput.value = '';
+      el.hiddenPhotoInput.click();
+    }
   },
   triggerVideoUpload: (idx) => {
     schoolState.activeStudentIndex = idx;
-    if (el.hiddenVideoInput) el.hiddenVideoInput.click();
+    if (el.hiddenVideoInput) {
+      el.hiddenVideoInput.value = '';
+      el.hiddenVideoInput.click();
+    }
+  },
+  clearPhoto: (idx) => {
+    const student = schoolState.students[idx];
+    if (student && confirm(`Deseja remover o desenho de "${student.name}"?`)) {
+      student.photoFile = null;
+      student.photoImg = null;
+      student.photoUrl = null;
+      student.status = 'pending';
+      renderStudentsList();
+      saveSchoolSession();
+    }
+  },
+  clearVideo: (idx) => {
+    const student = schoolState.students[idx];
+    if (student && confirm(`Deseja remover o vídeo de "${student.name}"?`)) {
+      student.videoFile = null;
+      student.videoUrl = null;
+      if (student.status === 'compiled') {
+        student.status = (student.photoFile || student.photoUrl) ? 'ready' : 'pending';
+      }
+      renderStudentsList();
+      saveSchoolSession();
+    }
   },
   removeStudent: (idx) => {
     if (confirm(`Remover "${schoolState.students[idx].name}" da lista?`)) {
@@ -395,9 +432,13 @@ function setupLiveCaptureModals() {
           student.photoFile = file;
           student.photoImg = await loadImageFromFile(file);
           student.photoUrl = student.photoImg.src;
+          if (student.videoFile || student.videoUrl) {
+            student.status = 'ready';
+          }
           renderStudentsList();
           saveSchoolSession();
         }
+        el.hiddenPhotoInput.value = '';
       }
     });
   }
@@ -407,13 +448,32 @@ function setupLiveCaptureModals() {
     el.hiddenVideoInput.addEventListener('change', () => {
       if (el.hiddenVideoInput.files && el.hiddenVideoInput.files[0]) {
         const file = el.hiddenVideoInput.files[0];
+        
+        // Validação de Tamanho Máximo de Vídeo (35 MB)
+        const MAX_VIDEO_SIZE_MB = 35;
+        if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+          alert(`⚠️ Vídeo muito pesado (${(file.size / (1024 * 1024)).toFixed(1)} MB)!\n\n` +
+                `Para garantir que o WebAR abra instantaneamente no celular dos pais sem travar a rede da escola, ` +
+                `o tamanho máximo permitido é de ${MAX_VIDEO_SIZE_MB} MB.\n\n` +
+                `💡 Dicas simples para reduzir:\n` +
+                `1. Grave o vídeo pelo botão "🔴 Gravar na Hora" do Estúdio (ele já grava comprimido em ~8 MB).\n` +
+                `2. Envie o vídeo para você mesmo no WhatsApp (o WhatsApp comprime automaticamente mantendo ótima qualidade).\n` +
+                `3. Ou ajuste a câmera do seu celular para gravar em HD (720p) ou Full HD (1080p).`);
+          el.hiddenVideoInput.value = '';
+          return;
+        }
+
         const student = schoolState.students[schoolState.activeStudentIndex];
         if (student) {
           student.videoFile = file;
           student.videoUrl = URL.createObjectURL(file);
+          if (student.photoFile || student.photoUrl) {
+            student.status = 'ready';
+          }
           renderStudentsList();
           saveSchoolSession();
         }
+        el.hiddenVideoInput.value = '';
       }
     });
   }

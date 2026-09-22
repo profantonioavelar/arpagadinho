@@ -142,6 +142,22 @@ function setupEventListeners() {
   // Wizard Step 1: Upload Imagem
   setupDropzone(dom.dropzoneImage, dom.inputImage, handleImageSelected);
 
+  const btnChangeImage = document.getElementById('btn-change-image');
+  const btnRemoveImage = document.getElementById('btn-remove-image');
+  if (btnChangeImage) {
+    btnChangeImage.addEventListener('click', () => dom.inputImage.click());
+  }
+  if (btnRemoveImage) {
+    btnRemoveImage.addEventListener('click', () => {
+      state.wizardData.imageFile = null;
+      state.wizardData.imageElement = null;
+      dom.inputImage.value = '';
+      dom.previewImageBox.style.display = 'none';
+      dom.dropzoneImage.style.display = 'block';
+      dom.btnStep1Next.disabled = true;
+    });
+  }
+
   if (dom.btnStep1Next) {
     dom.btnStep1Next.addEventListener('click', () => goToStep(2));
   }
@@ -157,6 +173,22 @@ function setupEventListeners() {
 
   // Wizard Step 3: Upload Vídeo
   setupDropzone(dom.dropzoneVideo, dom.inputVideo, handleVideoSelected);
+
+  const btnChangeVideo = document.getElementById('btn-change-video');
+  const btnRemoveVideo = document.getElementById('btn-remove-video');
+  if (btnChangeVideo) {
+    btnChangeVideo.addEventListener('click', () => dom.inputVideo.click());
+  }
+  if (btnRemoveVideo) {
+    btnRemoveVideo.addEventListener('click', () => {
+      state.wizardData.videoFile = null;
+      dom.previewVideoPlayer.src = '';
+      dom.inputVideo.value = '';
+      dom.previewVideoBox.style.display = 'none';
+      dom.dropzoneVideo.style.display = 'block';
+      dom.btnStep3Next.disabled = true;
+    });
+  }
 
   if (dom.btnStep3Next) {
     dom.btnStep3Next.addEventListener('click', () => goToStep(4));
@@ -444,6 +476,19 @@ async function startMindCompilation() {
 function handleVideoSelected(file) {
   if (!file || !file.type.startsWith('video/')) {
     alert('Por favor, selecione um arquivo de vídeo válido (MP4 ou WebM).');
+    return;
+  }
+
+  const MAX_VIDEO_SIZE_MB = 35;
+  if (file.size > MAX_VIDEO_SIZE_MB * 1024 * 1024) {
+    alert(`⚠️ Vídeo muito pesado (${(file.size / (1024 * 1024)).toFixed(1)} MB)!\n\n` +
+          `Para garantir que o WebAR abra instantaneamente no celular dos pais sem travar a rede da escola, ` +
+          `o tamanho máximo permitido é de ${MAX_VIDEO_SIZE_MB} MB.\n\n` +
+          `💡 Dicas simples para reduzir:\n` +
+          `1. Grave o vídeo pelo botão "🔴 Gravar na Hora" do Estúdio (ele já comprime automaticamente para ~8 MB).\n` +
+          `2. Envie o vídeo para você mesmo no WhatsApp (o WhatsApp comprime vídeos pesados mantendo ótima qualidade).\n` +
+          `3. Ou ajuste a câmera do seu celular para gravar em HD (720p) ou Full HD (1080p).`);
+    if (dom.inputVideo) dom.inputVideo.value = '';
     return;
   }
 

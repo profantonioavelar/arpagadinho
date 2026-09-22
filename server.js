@@ -131,7 +131,7 @@ const storage = multer.diskStorage({
 const upload = multer({
   storage,
   limits: {
-    fileSize: 100 * 1024 * 1024 // 100MB limite
+    fileSize: 40 * 1024 * 1024 // 40MB limite máximo para web e mobile
   }
 });
 
@@ -262,12 +262,26 @@ app.get('/api/experiences/:id', (req, res) => {
 });
 
 // Criar nova experiência com upload de arte, vídeo, arquivo .mind e modelo 3D opcional (Apenas professor)
-const uploadFields = upload.fields([
+const uploadMiddleware = upload.fields([
   { name: 'targetImage', maxCount: 1 },
   { name: 'overlayVideo', maxCount: 1 },
   { name: 'targetMind', maxCount: 1 },
   { name: 'model3d', maxCount: 1 }
 ]);
+
+const uploadFields = (req, res, next) => {
+  uploadMiddleware(req, res, (err) => {
+    if (err) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        return res.status(400).json({
+          error: 'Arquivo muito pesado! O tamanho máximo permitido é de 40 MB para garantir reprodução rápida nos smartphones dos pais.'
+        });
+      }
+      return res.status(400).json({ error: `Erro no envio dos arquivos: ${err.message}` });
+    }
+    next();
+  });
+};
 
 app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
   try {
