@@ -291,9 +291,57 @@ async function loadServerInfo() {
           <span>Rede Local: <strong>${data.localIp}</strong></span>
         `;
       }
+      updateStorageBanner(data.storageStatus || { enabled: data.cloudinaryEnabled });
     }
   } catch (err) {
     console.warn('Servidor info não disponível:', err);
+  }
+}
+
+function updateStorageBanner(status) {
+  const banner = document.getElementById('cloud-storage-banner');
+  const icon = document.getElementById('storage-status-icon');
+  const title = document.getElementById('storage-status-title');
+  const desc = document.getElementById('storage-status-desc');
+  const modal = document.getElementById('modal-cloud-help');
+  const btnOpenModal = document.getElementById('btn-open-cloud-modal');
+  const btnCloseModal = document.getElementById('modal-cloud-help-close');
+
+  if (!banner) return;
+
+  if (btnOpenModal && modal) {
+    btnOpenModal.onclick = () => modal.classList.add('active');
+  }
+  if (btnCloseModal && modal) {
+    btnCloseModal.onclick = () => modal.classList.remove('active');
+  }
+
+  if (status && status.enabled) {
+    banner.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    banner.style.background = 'rgba(16, 185, 129, 0.08)';
+    if (icon) icon.textContent = '☁️';
+    if (title) {
+      title.innerHTML = `Armazenamento Permanente Conectado <span style="color: #34d399; font-size: 0.8rem; font-weight: normal; margin-left: 0.35rem;">● Nuvem Ativa (${status.cloudName || 'Cloudinary'})</span>`;
+    }
+    if (desc) {
+      desc.textContent = 'Todos os vídeos, fotos e cartões gravados estão salvos de forma definitiva na nuvem e nunca serão perdidos.';
+    }
+    if (btnOpenModal) btnOpenModal.textContent = 'ℹ️ Detalhes da Nuvem';
+  } else {
+    banner.style.borderColor = 'rgba(239, 68, 68, 0.5)';
+    banner.style.background = 'rgba(239, 68, 68, 0.08)';
+    if (icon) icon.textContent = '⚠️';
+    if (title) {
+      title.innerHTML = `<span style="color: #f87171;">Atenção: Armazenamento em Nuvem Desconectado (Modo Temporário)</span>`;
+    }
+    if (desc) {
+      desc.innerHTML = `O Cloudinary não foi ativado no Render. <strong style="color: #fca5a5;">Qualquer vídeo gravado será apagado caso o site reinicie!</strong>`;
+    }
+    if (btnOpenModal) {
+      btnOpenModal.innerHTML = '⚙️ Como Ativar Nuvem no Render';
+      btnOpenModal.className = 'btn btn-primary btn-sm';
+      btnOpenModal.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    }
   }
 }
 

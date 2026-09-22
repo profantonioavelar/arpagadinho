@@ -816,6 +816,10 @@ async function startBatchProcessing() {
       const expData = await res.json();
       student.experienceId = expData.id;
       student.status = 'compiled';
+      student.isPermanent = expData.isPermanent;
+      if (expData.warning) {
+        window.__lastStorageWarning = expData.warning;
+      }
 
       // 4. Obter QR Code
       const qrRes = await fetch(`/api/qrcode/${expData.id}?base=${encodeURIComponent(window.location.origin)}`);
@@ -837,6 +841,11 @@ async function startBatchProcessing() {
   el.btnBatchCompile.disabled = false;
   renderStudentsList();
   saveSchoolSession();
+
+  // Se houver aviso de armazenamento temporário, alertar o professor com destaque
+  if (window.__lastStorageWarning) {
+    alert(`⚠️ Atenção importante sobre o armazenamento:\n\n${window.__lastStorageWarning}\n\nRecomendação: Para que os vídeos não sumam se o site reiniciar, ative as variáveis do Cloudinary no Render ou clique em "Fazer Backup (JSON)" no topo.`);
+  }
 
   // Abrir preparação para impressão
   savePrintDataForBatch();

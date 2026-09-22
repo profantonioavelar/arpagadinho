@@ -67,6 +67,29 @@
       </button>
     </div>
 
+    <!-- Banner de Status de Armazenamento e Segurança (Cloudinary / Backup) -->
+    <div id="cloud-storage-banner" class="storage-banner" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin: 1.25rem 0 2rem; padding: 0.9rem 1.25rem; border-radius: var(--radius-md); background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-subtle); backdrop-filter: blur(10px);">
+      <div style="display: flex; align-items: center; gap: 0.85rem;">
+        <span id="storage-status-icon" style="font-size: 1.5rem;">☁️</span>
+        <div>
+          <div id="storage-status-title" style="font-weight: 700; font-size: 0.95rem; color: #ffffff;">
+            Verificando armazenamento em nuvem...
+          </div>
+          <div id="storage-status-desc" style="font-size: 0.8rem; color: var(--text-muted);">
+            Aguarde enquanto verificamos se seus vídeos estão configurados para persistência permanente.
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+        <a id="btn-download-backup" href="/api/backup" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.85rem; text-decoration: none;" download="backup_artes_ubuntu.json" title="Baixar arquivo JSON com todas as artes cadastradas">
+          📥 Fazer Backup (JSON)
+        </a>
+        <button id="btn-open-cloud-modal" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.85rem;">
+          ⚙️ Como Ativar Nuvem
+        </button>
+      </div>
+    </div>
+
     <!-- SEÇÃO 1: Estúdio Geral -->
     <div id="section-studio-mode">
       <!-- Hero / Boas-vindas -->
@@ -555,6 +578,53 @@
   <!-- Inputs Ocultos para Upload Tradicional -->
   <input type="file" id="hidden-student-photo-input" accept="image/*" style="display: none;">
   <input type="file" id="hidden-student-video-input" accept="video/*" style="display: none;">
+
+  <!-- Modal: Guia de Ativação do Armazenamento em Nuvem (Cloudinary) -->
+  <div id="modal-cloud-help" class="modal-overlay">
+    <div class="modal-content" style="max-width: 620px;">
+      <div class="modal-header">
+        <h3 class="modal-title">☁️ Armazenamento em Nuvem Permanente (Render)</h3>
+        <button id="modal-cloud-help-close" class="modal-close" aria-label="Fechar">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6; color: var(--text-main);">
+        <p style="margin-bottom: 1rem;">
+          O Render utiliza um disco virtual temporário: quando o servidor dorme por inatividade ou reinicia, os arquivos locais do disco são reinicializados. Para que os vídeos e fotos dos estudantes <strong>nunca sumam</strong>, a plataforma integra-se à sua conta do Cloudinary.
+        </p>
+
+        <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-accent); border-radius: var(--radius-md); padding: 1rem; margin-bottom: 1.25rem;">
+          <h4 style="color: var(--primary); font-size: 0.95rem; margin-bottom: 0.5rem; font-weight: 700;">
+            Como Ativar no Painel do Render (Passo a Passo):
+          </h4>
+          <ol style="margin: 0; padding-left: 1.25rem; font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.45rem;">
+            <li>Acesse seu painel no <a href="https://dashboard.render.com" target="_blank" style="color: #60a5fa;">Render Dashboard</a> e abra o serviço <strong>arpagadinho</strong>.</li>
+            <li>No menu lateral esquerdo, clique em <strong>Environment</strong>.</li>
+            <li>Adicione ou verifique se estas 3 variáveis estão configuradas:</li>
+          </ol>
+
+          <div style="font-family: monospace; font-size: 0.85rem; background: #0b0f19; padding: 0.75rem; border-radius: 6px; margin: 0.75rem 0;">
+            <div><strong style="color: #60a5fa;">CLOUDINARY_CLOUD_NAME</strong> = dvb6nwylo</div>
+            <div><strong style="color: #60a5fa;">CLOUDINARY_API_KEY</strong> = 224845422173297</div>
+            <div><strong style="color: #60a5fa;">CLOUDINARY_API_SECRET</strong> = Fr90MmOsFmGDELYPsbR6bbd10eo</div>
+          </div>
+          <p style="font-size: 0.8rem; color: #fbbf24; margin: 0.4rem 0 0.6rem;">
+            ⚠️ <em>Atenção: digite "CLOUDINARY" completo (com "CLO" no início).</em>
+          </p>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0;">
+            4. Clique no botão <strong>"Save, rebuild, and deploy"</strong>. O Render reiniciará com armazenamento permanente ativado!
+          </p>
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: var(--radius-md); padding: 0.85rem 1rem;">
+          <strong style="color: #34d399;">🛡️ Backup de Segurança:</strong>
+          <p style="font-size: 0.85rem; color: #d1fae5; margin: 0.35rem 0 0;">
+            Você pode clicar no botão <strong>"📥 Fazer Backup (JSON)"</strong> no topo do estúdio a qualquer momento para baixar um arquivo com todos os dados e links das artes para o seu computador.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script type="module" src="/js/app.js"></script>
 </body>

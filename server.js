@@ -12,6 +12,7 @@ const cookieParser = require('cookie-parser');
 const generateCerts = require('./generate-certs');
 const {
   isCloudinaryEnabled,
+  getCloudinaryStatus,
   uploadToCloudinary,
   syncDatabaseToCloudinary,
   restoreDatabaseFromCloudinary
@@ -248,8 +249,57 @@ app.get('/api/info', requireAuthApi, (req, res) => {
     currentHost: `${protocol}://${host}`,
     networkHttpUrl: `http://${localIp}:${HTTP_PORT}`,
     networkHttpsUrl: `https://${localIp}:${HTTPS_PORT}`,
-    cloudinaryEnabled: isCloudinaryEnabled()
+    cloudinaryEnabled: isCloudinaryEnabled(),
+    storageStatus: getCloudinaryStatus()
   });
+});
+
+// Endpoint de status do armazenamento em nuvem
+app.get('/api/storage-status', (req, res) => {
+  res.json({
+    ...getCloudinaryStatus(),
+    experiencesCount: getExperiences().length
+  });
+});
+
+// Endpoint para baixar backup completo de experiências (JSON)
+app.get('/api/backup', requireAuthApi, (req, res) => {
+  const experiences = getExperiences();
+  const dateStr = new Date().toISOString().split('T')[0];
+  res.setHeader('Content-Disposition', `attachment; filename=arpagadinho_backup_${dateStr}.json`);
+  res.setHeader('Content-Type', 'application/json');
+  res.send(JSON.stringify(experiences, null, 2));
+});
+
+// Endpoint para restaurar backup completo de experiências (JSON)
+app.post('/api/backup/restore', requireAuthApi, (req, res) => {
+  try {
+    const backupData = req.body;
+    if (!Array.isArray(backupData)) {
+      return res.status(400).json({ error: 'O arquivo de backup deve conter uma lista (array) de experiências.' });
+    }
+
+    const currentExperiences = getExperiences();
+    const merged = [...backupData];
+    for (const exp of currentExperiences) {
+      if (!merged.some(e => e.id === exp.id)) {
+        merged.push(exp);
+      }
+    }
+
+    saveExperiences(merged);
+    if (isCloudinaryEnabled()) {
+      syncDatabaseToCloudinary(merged).catch(err => console.warn(err));
+    }
+
+    res.json({
+      success: true,
+      message: `Backup restaurado com sucesso! Total de ${merged.length} experiências ativas.`,
+      count: merged.length
+    });
+  } catch (err) {
+    res.status(500).json({ error: 'Falha ao restaurar backup: ' + err.message });
+  }
 });
 
 // Listar todas as experiências
@@ -327,8 +377,10 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
     let mindTargetUrl = `/uploads/${expId}/${targetMindFile.filename}`;
     let model3dUrl = model3dFile ? `/uploads/${expId}/${model3dFile.filename}` : null;
 
+    let warningMessage = null;
+
     if (isCloudinaryEnabled()) {
-      console.log(`[Cloudinary] Enviando arquivos de "${title}" (${expId}) para armazenamento permanente...`);
+      console.log(`[Cloudinary] Enviando arquivos de "${title}" (${expId}) para armazenamento permanente na nuvem...`);
       try {
         const [cImg, cVid, cMind, cModel] = await Promise.all([
           uploadToCloudinary(targetImageFile.path, `arpagadinho/${expId}/image`, 'image'),
@@ -342,12 +394,18 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
         if (cModel) model3dUrl = cModel;
         console.log(`[Cloudinary] ✓ Arquivos salvos permanentemente na nuvem com sucesso!`);
       } catch (uploadErr) {
-        console.warn('[Cloudinary] Falha ao enviar para nuvem, mantendo cópias locais:', uploadErr.message);
+        console.error('[Cloudinary] Falha ao enviar para nuvem:', uploadErr.message);
+        warningMessage = `Atenção: A experiência foi salva temporariamente no servidor local, mas o envio permanente para a nuvem falhou (${uploadErr.message}).`;
       }
+    } else {
+      warningMessage = 'Atenção: O Cloudinary NÃO está ativo no Render. Esta experiência foi salva apenas no disco temporário e será perdida quando o servidor reiniciar!';
+      console.warn('[Storage] AVISO: Gravando experiência em modo temporário (sem Cloudinary).');
     }
 
     const parsedName = studentName || (title && title.includes(' - ') ? title.split(' - ')[0].trim() : (title || 'Estudante'));
     const parsedClass = studentClass || (title && title.includes(' - ') ? title.split(' - ').slice(1).join(' - ').trim() : 'SALA 12');
+
+    const isPermanent = Boolean(isCloudinaryEnabled() && targetImageUrl.startsWith('http') && overlayVideoUrl.startsWith('http'));
 
     const newExperience = {
       id: expId,
@@ -367,6 +425,7 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       loop: loop === 'true' || loop === true,
       audioDefault: audioDefault || 'muted',
       isDemo: false,
+      isPermanent,
       createdAt: new Date().toISOString()
     };
 
@@ -378,7 +437,10 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       syncDatabaseToCloudinary(experiences).catch(e => console.warn(e));
     }
 
-    res.status(201).json(newExperience);
+    res.status(201).json({
+      ...newExperience,
+      warning: warningMessage
+    });
   } catch (err) {
     console.error('Erro ao criar experiência:', err);
     res.status(500).json({ error: 'Erro interno ao salvar experiência: ' + err.message });
