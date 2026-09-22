@@ -2,20 +2,24 @@ const cloudinary = require('cloudinary').v2;
 const fs = require('fs');
 const path = require('path');
 
+const cloudName = process.env.CLOUDINARY_CLOUD_NAME || process.env.UDINARY_CLOUD_NAME;
+const apiKey = process.env.CLOUDINARY_API_KEY || process.env.UDINARY_API_KEY;
+const apiSecret = process.env.CLOUDINARY_API_SECRET || process.env.UDINARY_API_SECRET;
+
 // Auto-configura via process.env.CLOUDINARY_URL se disponível
 function isCloudinaryEnabled() {
   return Boolean(
     process.env.CLOUDINARY_URL ||
-    (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET)
+    (cloudName && apiKey && apiSecret)
   );
 }
 
 // Configuração explícita caso fornecido por variáveis separadas
-if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET) {
+if (cloudName && apiKey && apiSecret) {
   cloudinary.config({
-    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-    api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET,
+    cloud_name: cloudName,
+    api_key: apiKey,
+    api_secret: apiSecret,
     secure: true
   });
 }
@@ -79,18 +83,17 @@ async function restoreDatabaseFromCloudinary(localDbPath) {
   if (!isCloudinaryEnabled()) return;
 
   try {
-    // Obter URL pública do arquivo raw no Cloudinary
-    let cloudName = '';
+    let cName = '';
     if (process.env.CLOUDINARY_URL) {
       const match = process.env.CLOUDINARY_URL.match(/@(.+)$/);
-      if (match) cloudName = match[1];
+      if (match) cName = match[1];
     } else {
-      cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+      cName = cloudName;
     }
 
-    if (!cloudName) return;
+    if (!cName) return;
 
-    const dbUrl = `https://res.cloudinary.com/${cloudName}/raw/upload/arpagadinho/database/experiences`;
+    const dbUrl = `https://res.cloudinary.com/${cName}/raw/upload/arpagadinho/database/experiences`;
     console.log('[Cloudinary] Verificando backup do banco na nuvem em:', dbUrl);
 
     const response = await fetch(dbUrl, { method: 'GET', cache: 'no-store' });
