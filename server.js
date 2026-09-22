@@ -10,6 +10,12 @@ const multer = require('multer');
 const QRCode = require('qrcode');
 const cookieParser = require('cookie-parser');
 const generateCerts = require('./generate-certs');
+const {
+  isCloudinaryEnabled,
+  uploadToCloudinary,
+  syncDatabaseToCloudinary,
+  restoreDatabaseFromCloudinary
+} = require('./cloudinary-helper');
 
 const app = express();
 const HTTP_PORT = process.env.PORT || process.env.HTTP_PORT || 3000;
@@ -241,7 +247,8 @@ app.get('/api/info', requireAuthApi, (req, res) => {
     httpsPort: HTTPS_PORT,
     currentHost: `${protocol}://${host}`,
     networkHttpUrl: `http://${localIp}:${HTTP_PORT}`,
-    networkHttpsUrl: `https://${localIp}:${HTTPS_PORT}`
+    networkHttpsUrl: `https://${localIp}:${HTTPS_PORT}`,
+    cloudinaryEnabled: isCloudinaryEnabled()
   });
 });
 
@@ -313,14 +320,38 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
     const height = parseFloat(targetHeight) || 1000;
     const aspectRatio = height / width;
 
+    let targetImageUrl = `/uploads/${expId}/${targetImageFile.filename}`;
+    let overlayVideoUrl = `/uploads/${expId}/${overlayVideoFile.filename}`;
+    let mindTargetUrl = `/uploads/${expId}/${targetMindFile.filename}`;
+    let model3dUrl = model3dFile ? `/uploads/${expId}/${model3dFile.filename}` : null;
+
+    if (isCloudinaryEnabled()) {
+      console.log(`[Cloudinary] Enviando arquivos de "${title}" (${expId}) para armazenamento permanente...`);
+      try {
+        const [cImg, cVid, cMind, cModel] = await Promise.all([
+          uploadToCloudinary(targetImageFile.path, `arpagadinho/${expId}/image`, 'image'),
+          uploadToCloudinary(overlayVideoFile.path, `arpagadinho/${expId}/video`, 'video'),
+          uploadToCloudinary(targetMindFile.path, `arpagadinho/${expId}/targets`, 'raw'),
+          model3dFile ? uploadToCloudinary(model3dFile.path, `arpagadinho/${expId}/model`, 'raw') : Promise.resolve(null)
+        ]);
+        if (cImg) targetImageUrl = cImg;
+        if (cVid) overlayVideoUrl = cVid;
+        if (cMind) mindTargetUrl = cMind;
+        if (cModel) model3dUrl = cModel;
+        console.log(`[Cloudinary] ✓ Arquivos salvos permanentemente na nuvem com sucesso!`);
+      } catch (uploadErr) {
+        console.warn('[Cloudinary] Falha ao enviar para nuvem, mantendo cópias locais:', uploadErr.message);
+      }
+    }
+
     const newExperience = {
       id: expId,
       title: title || 'Sem título',
       description: description || '',
-      targetImageUrl: `/uploads/${expId}/${targetImageFile.filename}`,
-      overlayVideoUrl: `/uploads/${expId}/${overlayVideoFile.filename}`,
-      mindTargetUrl: `/uploads/${expId}/${targetMindFile.filename}`,
-      model3dUrl: model3dFile ? `/uploads/${expId}/${model3dFile.filename}` : null,
+      targetImageUrl,
+      overlayVideoUrl,
+      mindTargetUrl,
+      model3dUrl,
       model3dScale: model3dScale || '0.35 0.35 0.35',
       targetWidth: width,
       targetHeight: height,
@@ -335,6 +366,10 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
     const experiences = getExperiences();
     experiences.unshift(newExperience);
     saveExperiences(experiences);
+
+    if (isCloudinaryEnabled()) {
+      syncDatabaseToCloudinary(experiences).catch(e => console.warn(e));
+    }
 
     res.status(201).json(newExperience);
   } catch (err) {
@@ -356,6 +391,10 @@ app.delete('/api/experiences/:id', requireAuthApi, (req, res) => {
   const exp = experiences[expIndex];
   experiences.splice(expIndex, 1);
   saveExperiences(experiences);
+
+  if (isCloudinaryEnabled()) {
+    syncDatabaseToCloudinary(experiences).catch(e => console.warn(e));
+  }
 
   // Deletar pasta de uploads se não for demo
   if (!exp.isDemo) {
@@ -385,7 +424,7 @@ app.get('/api/qrcode/:id', async (req, res) => {
       origin = process.env.RENDER_EXTERNAL_URL.replace(/\/$/, '');
     } else {
       const forwardedHost = req.headers['x-forwarded-host'] || req.headers.host;
-      const forwardedProto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : (req.protocol || 'http'));
+      const forwardedProto = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
       
       if (forwardedHost && !forwardedHost.includes('localhost') && !forwardedHost.startsWith('127.') && !forwardedHost.startsWith('10.') && !forwardedHost.startsWith('192.168.')) {
         origin = `${forwardedProto}://${forwardedHost}`;
@@ -448,6 +487,11 @@ app.get('/view/:id', (req, res) => {
 // ==========================================
 
 async function startServers() {
+  if (isCloudinaryEnabled()) {
+    console.log('☁️ Armazenamento Cloudinary ativo! Sincronizando banco de experiências...');
+    await restoreDatabaseFromCloudinary(DATA_FILE);
+  }
+
   seedDemoExperiences();
 
   const localIp = getLocalIpAddress();
