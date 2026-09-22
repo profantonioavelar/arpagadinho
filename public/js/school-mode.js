@@ -791,6 +791,8 @@ async function startBatchProcessing() {
       // 3. Enviar ao backend Express
       const formData = new FormData();
       formData.append('title', `${student.name} - ${student.studentClass}`);
+      formData.append('studentName', student.name);
+      formData.append('studentClass', student.studentClass);
       formData.append('description', student.title || 'Arte da Exposição Escolar');
       formData.append('targetWidth', compileResult.width);
       formData.append('targetHeight', compileResult.height);

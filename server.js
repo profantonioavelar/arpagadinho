@@ -295,6 +295,8 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
     const {
       title,
       description,
+      studentName,
+      studentClass,
       targetWidth,
       targetHeight,
       fitMode,
@@ -344,9 +346,14 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       }
     }
 
+    const parsedName = studentName || (title && title.includes(' - ') ? title.split(' - ')[0].trim() : (title || 'Estudante'));
+    const parsedClass = studentClass || (title && title.includes(' - ') ? title.split(' - ').slice(1).join(' - ').trim() : 'SALA 12');
+
     const newExperience = {
       id: expId,
-      title: title || 'Sem título',
+      title: title || `${parsedName} - ${parsedClass}`,
+      studentName: parsedName,
+      studentClass: parsedClass,
       description: description || '',
       targetImageUrl,
       overlayVideoUrl,

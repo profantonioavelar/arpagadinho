@@ -2,6 +2,8 @@
   {
     "id": "demo-card-tech",
     "title": "Cartão Postal Futurista (Vídeo + Objeto 3D)",
+    "studentName": "Arte Interativa Ubuntu",
+    "studentClass": "SALA 12",
     "description": "Exemplo híbrido: Apresentação em vídeo na parede com um Cristal Ubuntu 3D flutuando à frente.",
     "targetImageUrl": "/samples/sample-1/image.jpg",
     "overlayVideoUrl": "/samples/sample-1/video.mp4",
@@ -20,6 +22,8 @@
   {
     "id": "demo-raccoon-art",
     "title": "Guaxinim Ilustrado (Demonstração)",
+    "studentName": "Guaxinim Ilustrado",
+    "studentClass": "SALA 12",
     "description": "Pôster quadrado artístico com animação fluida alinhada ao marcador.",
     "targetImageUrl": "/samples/sample-2/image.jpg",
     "overlayVideoUrl": "/samples/sample-2/video.mp4",

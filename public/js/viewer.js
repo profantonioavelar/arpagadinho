@@ -20,6 +20,8 @@ const ui = {
   statusText: document.getElementById('status-text'),
   reticle: document.getElementById('scanning-reticle'),
   reticleThumb: document.getElementById('reticle-thumb'),
+  studentName: document.getElementById('student-name-display'),
+  studentRoom: document.getElementById('student-room-display'),
   titleBadge: document.getElementById('title-badge'),
   btnAudio: document.getElementById('btn-audio'),
   btnPlayPause: document.getElementById('btn-play-pause'),
@@ -30,6 +32,58 @@ const ui = {
   errorOverlay: document.getElementById('error-overlay'),
   errorMessage: document.getElementById('error-message')
 };
+
+// ==========================================================================
+// Helpers de Extração e Ajuste de Retículo
+// ==========================================================================
+function extractStudentInfo(exp) {
+  let name = exp.studentName || '';
+  let room = exp.studentClass || '';
+
+  if (!name && exp.title) {
+    if (exp.title.includes(' - ')) {
+      const parts = exp.title.split(' - ');
+      name = parts[0].trim();
+      room = parts.slice(1).join(' - ').trim();
+    } else if (exp.title.includes(' • ')) {
+      const parts = exp.title.split(' • ');
+      name = parts[0].trim();
+      room = parts.slice(1).join(' • ').trim();
+    } else {
+      name = exp.title;
+      room = 'SALA 12';
+    }
+  }
+
+  if (!name) name = 'Estudante EMJPa';
+  if (!room) room = 'SALA 12';
+
+  return { name, room };
+}
+
+function adjustReticleSize(aspectRatio) {
+  if (!ui.reticle) return;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const maxReticleWidth = Math.min(viewportWidth * 0.88, 420);
+
+  if (aspectRatio && aspectRatio > 0) {
+    let calcHeight = maxReticleWidth * aspectRatio;
+    const maxAllowedHeight = viewportHeight * 0.52;
+    if (calcHeight > maxAllowedHeight) {
+      calcHeight = maxAllowedHeight;
+      const calcWidth = calcHeight / aspectRatio;
+      ui.reticle.style.width = `${Math.round(calcWidth)}px`;
+      ui.reticle.style.height = `${Math.round(calcHeight)}px`;
+      return;
+    }
+    ui.reticle.style.width = `${Math.round(maxReticleWidth)}px`;
+    ui.reticle.style.height = `${Math.round(calcHeight)}px`;
+  } else {
+    ui.reticle.style.width = 'min(88vw, 420px)';
+    ui.reticle.style.height = 'min(88vw, 420px)';
+  }
+}
 
 // ==========================================================================
 // Inicialização
@@ -54,8 +108,15 @@ async function initViewer() {
     const exp = await res.json();
     viewerState.experience = exp;
 
-    // Atualizar UI básica
-    if (ui.titleBadge) ui.titleBadge.textContent = exp.title;
+    // Atualizar UI com Nome do Estudante e Sala da EMJPa
+    const { name, room } = extractStudentInfo(exp);
+    if (ui.studentName) ui.studentName.textContent = name;
+    if (ui.studentRoom) ui.studentRoom.textContent = room;
+    if (ui.titleBadge) ui.titleBadge.textContent = `${name} - ${room}`;
+
+    // Configurar tamanho responsivo e proporcional do retículo ampliado
+    adjustReticleSize(exp.aspectRatio);
+
     if (ui.reticleThumb) {
       ui.reticleThumb.src = exp.targetImageUrl;
       ui.reticleThumb.style.display = 'block';
@@ -103,9 +164,11 @@ function setupUiListeners() {
     ui.btnPlayPause.addEventListener('click', togglePlayPause);
   }
 
-  // Tratamento de orientação e redimensionamento
+  // Tratamento de orientação e redimensionamento do retículo
   window.addEventListener('resize', () => {
-    // Redimensionamento responsivo do retículo
+    if (viewerState.experience) {
+      adjustReticleSize(viewerState.experience.aspectRatio);
+    }
   });
 }
 
@@ -203,7 +266,7 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
       ui.statusBadge.className = 'webar-status-badge status-found';
     }
     if (ui.statusText) {
-      ui.statusText.textContent = '✨ Arte detectada! Reproduzindo animação...';
+      ui.statusText.textContent = '✨ Arte detectada!';
     }
     if (ui.reticle) {
       ui.reticle.classList.add('hidden');
@@ -233,7 +296,7 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
       ui.statusBadge.className = 'webar-status-badge status-hunting';
     }
     if (ui.statusText) {
-      ui.statusText.textContent = '🔍 Aponte a câmera para a imagem impressa';
+      ui.statusText.textContent = 'Aponte a câmera para a imagem impressa';
     }
     if (ui.reticle) {
       ui.reticle.classList.remove('hidden');
