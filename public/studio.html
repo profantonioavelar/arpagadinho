@@ -402,6 +402,25 @@
               <option value="muted" selected>Silencioso no Início + Botão "Ativar Som" (Recomendado para Celulares)</option>
               <option value="enabled">Tentar Áudio Automático (Pode ser bloqueado por políticas do Safari/Chrome)</option>
             </select>
+          </div>
+
+          <!-- Efeito de Fundo do Vídeo (Chroma Key / Mural Vivo) -->
+          <div class="form-group" style="background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.25rem;">
+            <label class="form-label" for="select-chroma-key" style="display: flex; align-items: center; justify-content: space-between; color: #10b981;">
+              <span style="font-weight: 700;">✨ Efeito de Fundo do Vídeo (Chroma Key / Mural Vivo)</span>
+              <span style="font-size: 0.72rem; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 2px 8px; border-radius: 9999px; font-weight: 700;">Mural Vivo & Asas</span>
+            </label>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.4;">
+              Ideal para murais (como pintura de asas) onde o fundo original e a pessoa continuam visíveis na gravação:
+            </p>
+            <select id="select-chroma-key" class="form-select">
+              <option value="none" selected>Padrão (Opaco — Vídeo completo sobreposto à arte física)</option>
+              <option value="green">Fundo Verde (Chroma Key — Torna a cor verde 100% transparente)</option>
+              <option value="black">Fundo Preto Iluminado (Aditivo — Asas de Luz, Partículas, Fogo, Brilhos e Neon)</option>
+              <option value="transparent">Transparência Direta (WebM / GIF com transparência nativa)</option>
+            </select>
+          </div>
+
           <!-- Campo Opcional: Objeto 3D (.GLB) -->
           <div class="form-group" style="background: rgba(99, 102, 241, 0.08); border: 1px dashed var(--border-accent); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.25rem;">
             <label class="form-label" for="input-model3d" style="display: flex; align-items: center; justify-content: space-between; color: #38bdf8;">

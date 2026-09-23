@@ -100,12 +100,12 @@
       <img id="reticle-thumb" class="reticle-preview-img" src="" alt="Silhueta da Arte">
     </div>
 
-    <!-- Barra Inferior de Controles de Mídia -->
+    <!-- Barra Inferior de Controles de Mídia & Captura -->
     <div class="webar-bottom-bar">
       <!-- Botão de Áudio Pulsante (Resolve restrições de autoplay do Safari e Chrome móvel) -->
       <button id="btn-audio" class="floating-btn btn-unmute-pulse">
         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
-        <span>🔊 Ativar Som</span>
+        <span>🔊 Som</span>
       </button>
 
       <!-- Botão de Play / Pause -->
@@ -113,8 +113,23 @@
         <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         <span>Pausar</span>
       </button>
+
+      <!-- Botão de Tirar Foto -->
+      <button id="btn-take-photo" class="floating-btn btn-capture-photo" title="Tirar foto com o efeito de Realidade Aumentada">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="4" stroke-width="2"/></svg>
+        <span>📸 Foto</span>
+      </button>
+
+      <!-- Botão de Gravar Vídeo (Até 15s) -->
+      <button id="btn-record-video" class="floating-btn btn-capture-record" title="Gravar clipe de vídeo para WhatsApp ou Instagram">
+        <span class="record-pulse-dot"></span>
+        <span id="record-btn-text">🔴 Gravar</span>
+      </button>
     </div>
   </div>
+
+  <!-- Flash da Câmera ao Tirar Foto -->
+  <div id="camera-flash" class="camera-flash"></div>
 
   <!-- Modal: Exibir Arte Original (Para testar apontando outro celular para a tela) -->
   <div id="modal-artwork" class="modal-overlay">
@@ -130,6 +145,36 @@
           Se você estiver testando sem a arte física impressa, aponte a câmera de outro dispositivo para esta tela para iniciar a Realidade Aumentada.
         </p>
         <img id="artwork-modal-img" src="" alt="Arte Marcadora" style="max-width: 100%; max-height: 55vh; object-fit: contain; border-radius: var(--radius-md); border: 2px solid var(--border-accent);">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Mídia Capturada (Foto ou Vídeo Gravado) -->
+  <div id="modal-captured-media" class="modal-overlay">
+    <div class="modal-content" style="max-width: 480px; text-align: center;">
+      <div class="modal-header">
+        <h3 id="captured-media-title" class="modal-title">📸 Sua Foto WebAR</h3>
+        <button id="modal-media-close" class="modal-close" aria-label="Fechar">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body" style="padding: 1rem;">
+        <div id="media-preview-container" style="background: #000000; border-radius: var(--radius-md); overflow: hidden; margin-bottom: 1.25rem; border: 1px solid var(--border-subtle); display: flex; align-items: center; justify-content: center; min-height: 220px; max-height: 55vh;">
+          <img id="captured-photo-img" src="" alt="Foto WebAR" style="display: none; max-width: 100%; max-height: 55vh; object-fit: contain;">
+          <video id="captured-video-player" controls playsinline loop autoplay style="display: none; max-width: 100%; max-height: 55vh; object-fit: contain;"></video>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 0.65rem;">
+          <button id="btn-download-media" class="btn btn-primary btn-full" style="font-size: 0.95rem; padding: 0.75rem 1rem;">
+            📥 Salvar no Celular (Download)
+          </button>
+          <button id="btn-share-media" class="btn btn-secondary btn-full" style="background: rgba(37, 211, 102, 0.16); color: #22c55e; border: 1px solid rgba(37, 211, 102, 0.4); font-size: 0.95rem; padding: 0.75rem 1rem; font-weight: 700;">
+            📲 Compartilhar no WhatsApp
+          </button>
+          <button id="btn-retake-media" class="btn btn-sm" style="background: transparent; color: var(--text-muted); border: none; margin-top: 0.25rem; cursor: pointer;">
+            ✕ Voltar à Câmera
+          </button>
+        </div>
       </div>
     </div>
   </div>

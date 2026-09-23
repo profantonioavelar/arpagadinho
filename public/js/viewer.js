@@ -1,8 +1,109 @@
 /**
  * EyeJack WebAR Viewer Controller
  * Gerencia a cena MindAR + A-Frame, sincronização de vídeo, alinhamento 3D,
- * detecção de marcadores físicos e políticas de áudio mobile.
+ * detecção de marcadores físicos, Chroma Key / transparência de murais,
+ * e captura de fotos e gravação de vídeos WebAR com compartilhamento.
  */
+
+// ==========================================================================
+// Registro do Shader Chroma Key no A-Frame
+// ==========================================================================
+if (typeof AFRAME !== 'undefined' && (!AFRAME.shaders || !AFRAME.shaders['chromakey'])) {
+  AFRAME.registerShader('chromakey', {
+    schema: {
+      src: { type: 'map' },
+      color: { default: { x: 0.0, y: 1.0, z: 0.0 }, type: 'vec3' },
+      similarity: { default: 0.38, type: 'number' },
+      smoothness: { default: 0.12, type: 'number' }
+    },
+    init: function (data) {
+      let videoTexture = null;
+      if (data.src) {
+        if (data.src instanceof HTMLVideoElement) {
+          videoTexture = new THREE.VideoTexture(data.src);
+        } else if (typeof data.src === 'string') {
+          const el = document.querySelector(data.src);
+          if (el) videoTexture = new THREE.VideoTexture(el);
+        } else if (data.src.isTexture) {
+          videoTexture = data.src;
+        }
+      }
+      if (videoTexture) {
+        videoTexture.minFilter = THREE.LinearFilter;
+      }
+      this.material = new THREE.ShaderMaterial({
+        uniforms: {
+          color: { value: new THREE.Color(data.color.x, data.color.y, data.color.z) },
+          similarity: { value: data.similarity },
+          smoothness: { value: data.smoothness },
+          myTexture: { value: videoTexture }
+        },
+        vertexShader: `
+          varying vec2 vUv;
+          void main(void) {
+            vUv = uv;
+            gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+          }
+        `,
+        fragmentShader: `
+          uniform vec3 color;
+          uniform float similarity;
+          uniform float smoothness;
+          uniform sampler2D myTexture;
+          varying vec2 vUv;
+
+          // Conversão de RGB para YCbCr para isolamento preciso de verde
+          vec3 rgb2ycbcr(vec3 c) {
+            float y = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+            float cb = (c.b - y) * 0.564 + 0.5;
+            float cr = (c.r - y) * 0.713 + 0.5;
+            return vec3(y, cb, cr);
+          }
+
+          void main(void) {
+            vec4 pixelColor = texture2D(myTexture, vUv);
+            vec3 keyYCbCr = rgb2ycbcr(color);
+            vec3 pixelYCbCr = rgb2ycbcr(pixelColor.rgb);
+
+            float d = distance(keyYCbCr.yz, pixelYCbCr.yz);
+            float mask = smoothstep(similarity, similarity + smoothness, d);
+
+            gl_FragColor = vec4(pixelColor.rgb, pixelColor.a * mask);
+          }
+        `,
+        transparent: true
+      });
+    },
+    update: function (data) {
+      if (this.material && this.material.uniforms) {
+        if (data.src) {
+          let videoTexture = null;
+          if (data.src instanceof HTMLVideoElement) {
+            videoTexture = new THREE.VideoTexture(data.src);
+          } else if (typeof data.src === 'string') {
+            const el = document.querySelector(data.src);
+            if (el) videoTexture = new THREE.VideoTexture(el);
+          } else if (data.src.isTexture) {
+            videoTexture = data.src;
+          }
+          if (videoTexture) {
+            videoTexture.minFilter = THREE.LinearFilter;
+            this.material.uniforms.myTexture.value = videoTexture;
+          }
+        }
+        if (data.color) {
+          this.material.uniforms.color.value = new THREE.Color(data.color.x, data.color.y, data.color.z);
+        }
+        if (data.similarity !== undefined) {
+          this.material.uniforms.similarity.value = data.similarity;
+        }
+        if (data.smoothness !== undefined) {
+          this.material.uniforms.smoothness.value = data.smoothness;
+        }
+      }
+    }
+  });
+}
 
 // Estado da visualização
 const viewerState = {
@@ -10,7 +111,16 @@ const viewerState = {
   isTargetFound: false,
   isAudioMuted: true,
   isVideoPlaying: false,
-  hasUserInteracted: false
+  hasUserInteracted: false,
+  // Gravação e Captura
+  isRecording: false,
+  mediaRecorder: null,
+  recordedChunks: [],
+  recordingTimerId: null,
+  recordingSeconds: 0,
+  currentCapturedBlob: null,
+  currentCapturedType: null, // 'photo' | 'video'
+  currentCapturedUrl: null
 };
 
 // Elementos DOM
@@ -30,7 +140,20 @@ const ui = {
   artworkModalImg: document.getElementById('artwork-modal-img'),
   modalClose: document.getElementById('modal-artwork-close'),
   errorOverlay: document.getElementById('error-overlay'),
-  errorMessage: document.getElementById('error-message')
+  errorMessage: document.getElementById('error-message'),
+  // Captura & Mídia
+  btnTakePhoto: document.getElementById('btn-take-photo'),
+  btnRecordVideo: document.getElementById('btn-record-video'),
+  recordBtnText: document.getElementById('record-btn-text'),
+  cameraFlash: document.getElementById('camera-flash'),
+  modalCapturedMedia: document.getElementById('modal-captured-media'),
+  modalMediaClose: document.getElementById('modal-media-close'),
+  capturedMediaTitle: document.getElementById('captured-media-title'),
+  capturedPhotoImg: document.getElementById('captured-photo-img'),
+  capturedVideoPlayer: document.getElementById('captured-video-player'),
+  btnDownloadMedia: document.getElementById('btn-download-media'),
+  btnShareMedia: document.getElementById('btn-share-media'),
+  btnRetakeMedia: document.getElementById('btn-retake-media')
 };
 
 // ==========================================================================
@@ -148,12 +271,6 @@ function setupUiListeners() {
     });
   }
 
-  window.addEventListener('click', (e) => {
-    if (e.target === ui.modalArtwork) {
-      ui.modalArtwork.classList.remove('active');
-    }
-  });
-
   // Controle de Áudio (Unmute / Mute)
   if (ui.btnAudio) {
     ui.btnAudio.addEventListener('click', toggleAudio);
@@ -163,6 +280,40 @@ function setupUiListeners() {
   if (ui.btnPlayPause) {
     ui.btnPlayPause.addEventListener('click', togglePlayPause);
   }
+
+  // Captura de Foto
+  if (ui.btnTakePhoto) {
+    ui.btnTakePhoto.addEventListener('click', takeArPhoto);
+  }
+
+  // Gravação de Vídeo
+  if (ui.btnRecordVideo) {
+    ui.btnRecordVideo.addEventListener('click', toggleVideoRecording);
+  }
+
+  // Modal de Mídia Capturada
+  if (ui.modalMediaClose) {
+    ui.modalMediaClose.addEventListener('click', closeCapturedMediaModal);
+  }
+  if (ui.btnRetakeMedia) {
+    ui.btnRetakeMedia.addEventListener('click', closeCapturedMediaModal);
+  }
+  if (ui.btnDownloadMedia) {
+    ui.btnDownloadMedia.addEventListener('click', downloadCapturedMedia);
+  }
+  if (ui.btnShareMedia) {
+    ui.btnShareMedia.addEventListener('click', shareCapturedMedia);
+  }
+
+  // Fechar modais ao clicar no fundo escuro
+  window.addEventListener('click', (e) => {
+    if (e.target === ui.modalArtwork) {
+      ui.modalArtwork.classList.remove('active');
+    }
+    if (e.target === ui.modalCapturedMedia) {
+      closeCapturedMediaModal();
+    }
+  });
 
   // Tratamento de orientação e redimensionamento do retículo
   window.addEventListener('resize', () => {
@@ -176,19 +327,32 @@ function setupUiListeners() {
 // Construção Dinâmica da Cena A-Frame + MindAR
 // ==========================================================================
 function buildAndMountArScene(exp) {
-  // Calcular dimensões do plano 3D do vídeo
   // No MindAR, a largura do marcador é normalizada para 1.0 unidade 3D
   const width = 1.0;
   const height = exp.aspectRatio || (exp.targetHeight / exp.targetWidth) || 1.0;
 
-  console.log(`[WebAR] Configurando plano de vídeo: largura=${width}, altura=${height.toFixed(4)}`);
+  // Configuração do material baseada no modo Chroma Key
+  let planeMaterial = 'shader: flat; src: #ar-video-element; transparent: false; opacity: 1.0;';
+  const chroma = exp.chromaKey || 'none';
 
-  // Montar HTML da cena A-Frame
+  if (chroma === 'green') {
+    planeMaterial = 'shader: chromakey; src: #ar-video-element; color: 0 1 0; similarity: 0.38; smoothness: 0.12; transparent: true;';
+  } else if (chroma === 'black') {
+    // Efeito Aditivo: Preto fica 100% invisível; luzes, asas douradas, partículas e neon brilham sobre o mural
+    planeMaterial = 'shader: flat; src: #ar-video-element; blending: additive; transparent: true; depthWrite: false;';
+  } else if (chroma === 'transparent') {
+    // Transparência nativa para WebM com canal alfa ou GIF
+    planeMaterial = 'shader: flat; src: #ar-video-element; transparent: true; alphaTest: 0.05;';
+  }
+
+  console.log(`[WebAR] Configurando cena: largura=${width}, altura=${height.toFixed(4)}, chromaKey=${chroma}`);
+
+  // Montar HTML da cena A-Frame com preserveDrawingBuffer para suporte à captura de foto e vídeo
   const sceneHtml = `
     <a-scene
       mindar-image="imageTargetSrc: ${exp.mindTargetUrl}; filterMinCF: 0.0001; filterBeta: 0.001; uiScanning: no; autoStart: true;"
       color-space="sRGB"
-      renderer="colorManagement: true, physicallyCorrectLights"
+      renderer="preserveDrawingBuffer: true; colorManagement: true; physicallyCorrectLights: true;"
       vr-mode-ui="enabled: false"
       device-orientation-permission-ui="enabled: false"
       style="position: fixed; inset: 0; width: 100vw; height: 100vh;">
@@ -213,12 +377,11 @@ function buildAndMountArScene(exp) {
       <a-entity id="ar-target-entity" mindar-image-target="targetIndex: 0">
         <!-- 1. Plano de Vídeo (ancorado na parede / arte física em Z=0) -->
         <a-plane id="ar-video-plane"
-                 src="#ar-video-element"
                  position="0 0 0"
                  width="${width}"
                  height="${height}"
                  rotation="0 0 0"
-                 material="shader: flat; transparent: false; opacity: 1.0;"></a-plane>
+                 material="${planeMaterial}"></a-plane>
 
         ${exp.model3dUrl ? `
         <!-- 2. Objeto 3D Híbrido (flutuando à frente do vídeo em Z=0.22 com rotação suave) -->
@@ -248,10 +411,8 @@ function buildAndMountArScene(exp) {
 function setupMindArEvents(sceneEl, targetEntity, videoEl) {
   if (!targetEntity || !videoEl) return;
 
-  // Carregar vídeo antecipadamente
   videoEl.load();
 
-  // Evento quando a cena está pronta
   sceneEl.addEventListener('renderstart', () => {
     console.log('[WebAR] Cena A-Frame iniciada.');
   });
@@ -261,7 +422,6 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
     console.log('[WebAR] 🎯 Marcador encontrado!');
     viewerState.isTargetFound = true;
 
-    // Atualizar badge e retículo
     if (ui.statusBadge) {
       ui.statusBadge.className = 'webar-status-badge status-found';
     }
@@ -272,7 +432,6 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
       ui.reticle.classList.add('hidden');
     }
 
-    // Iniciar reprodução do vídeo
     videoEl.play().then(() => {
       viewerState.isVideoPlaying = true;
       updatePlayPauseButtonState(true);
@@ -280,7 +439,6 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
       console.warn('[WebAR] Autoplay bloqueado pelo navegador:', err);
     });
 
-    // Feedback tátil no mobile (se suportado)
     if (navigator.vibrate) {
       navigator.vibrate(50);
     }
@@ -291,7 +449,6 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
     console.log('[WebAR] 🔍 Marcador perdido.');
     viewerState.isTargetFound = false;
 
-    // Atualizar badge e exibir retículo guia
     if (ui.statusBadge) {
       ui.statusBadge.className = 'webar-status-badge status-hunting';
     }
@@ -302,13 +459,11 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
       ui.reticle.classList.remove('hidden');
     }
 
-    // Pausar vídeo para economizar processamento e bateria
     videoEl.pause();
     viewerState.isVideoPlaying = false;
     updatePlayPauseButtonState(false);
   });
 
-  // Capturar possíveis erros de permissão de câmera
   sceneEl.addEventListener('arError', (e) => {
     console.error('[WebAR] Erro de AR:', e);
     showError('Não foi possível acessar a câmera. Verifique as permissões do navegador e se a conexão é segura (HTTPS).');
@@ -316,7 +471,7 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
 }
 
 // ==========================================================================
-// Controle de Áudio e Políticas de Navegadores Móveis
+// Controle de Áudio e Play / Pause
 // ==========================================================================
 function toggleAudio() {
   const videoEl = document.querySelector('#ar-video-element');
@@ -329,7 +484,7 @@ function toggleAudio() {
   if (videoEl.muted) {
     ui.btnAudio.innerHTML = `
       <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
-      <span>🔇 Ativar Áudio</span>
+      <span>🔇 Ativar Som</span>
     `;
     ui.btnAudio.classList.remove('btn-unmute-pulse');
   } else {
@@ -341,7 +496,6 @@ function toggleAudio() {
   }
 }
 
-// Controle Manual de Play / Pause
 function togglePlayPause() {
   const videoEl = document.querySelector('#ar-video-element');
   if (!videoEl) return;
@@ -371,6 +525,425 @@ function updatePlayPauseButtonState(isPlaying) {
       <span>Reproduzir</span>
     `;
   }
+}
+
+// ==========================================================================
+// Captura de Foto e Gravação de Vídeo WebAR
+// ==========================================================================
+
+/**
+ * Desenha a marca d'água comemorativa do projeto escolar
+ */
+function drawWatermarkBadge(ctx, w, h) {
+  const badgeH = Math.round(h * 0.075);
+  const padX = Math.round(w * 0.04);
+  const padY = Math.round(h * 0.025);
+  const badgeW = w - (padX * 2);
+  const badgeY = h - padY - badgeH;
+  const radius = Math.round(badgeH * 0.22);
+
+  ctx.save();
+  // Fundo translúcido escuro
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  if (ctx.roundRect) {
+    ctx.roundRect(padX, badgeY, badgeW, badgeH, radius);
+  } else {
+    ctx.rect(padX, badgeY, badgeW, badgeH);
+  }
+  ctx.fill();
+  ctx.stroke();
+
+  // Texto Linha 1: "Projeto UBUNTU — EMJPa 2026"
+  const fontSizeL1 = Math.max(16, Math.round(badgeH * 0.35));
+  ctx.font = `bold ${fontSizeL1}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'top';
+  ctx.fillText('✨ Projeto UBUNTU — EMJPa 2026', padX + 16, badgeY + (badgeH * 0.16));
+
+  // Texto Linha 2: Aluno e Turma
+  const info = extractStudentInfo(viewerState.experience || {});
+  const studentText = `🎨 Aluno(a): ${info.name} • ${info.room}`;
+  const fontSizeL2 = Math.max(13, Math.round(badgeH * 0.26));
+  ctx.font = `500 ${fontSizeL2}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  ctx.fillStyle = '#38bdf8';
+  ctx.fillText(studentText, padX + 16, badgeY + (badgeH * 0.56));
+
+  ctx.restore();
+}
+
+/**
+ * Captura um quadro composto em alta definição: Câmera Real + Realidade Aumentada WebGL + Marca d'água
+ */
+function captureCompositeFrame(targetWidth = 1080) {
+  const cameraVideo = Array.from(document.querySelectorAll('video')).find(v => v.id !== 'ar-video-element') || document.querySelector('video');
+  const arCanvas = document.querySelector('canvas.a-canvas') || document.querySelector('canvas');
+
+  const screenW = window.innerWidth || 720;
+  const screenH = window.innerHeight || 1280;
+  const aspect = screenH / screenW;
+
+  const destW = targetWidth;
+  const destH = Math.round(destW * aspect);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = destW;
+  canvas.height = destH;
+  const ctx = canvas.getContext('2d', { alpha: false });
+
+  // 1. Câmera com object-fit: cover idêntico ao visor do celular
+  if (cameraVideo && cameraVideo.videoWidth > 0 && cameraVideo.videoHeight > 0) {
+    const vW = cameraVideo.videoWidth;
+    const vH = cameraVideo.videoHeight;
+    const vAspect = vH / vW;
+    let sW, sH, sX, sY;
+
+    if (vAspect > aspect) {
+      sW = vW;
+      sH = Math.round(vW * aspect);
+      sX = 0;
+      sY = Math.round((vH - sH) / 2);
+    } else {
+      sH = vH;
+      sW = Math.round(vH / aspect);
+      sX = Math.round((vW - sW) / 2);
+      sY = 0;
+    }
+    ctx.drawImage(cameraVideo, sX, sY, sW, sH, 0, 0, destW, destH);
+  } else {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 0, destW, destH);
+  }
+
+  // 2. Sobrepor a cena WebGL A-Frame (Realidade Aumentada)
+  if (arCanvas) {
+    ctx.drawImage(arCanvas, 0, 0, destW, destH);
+  }
+
+  // 3. Marca d'água de lembrança comemorativa
+  drawWatermarkBadge(ctx, destW, destH);
+
+  return canvas;
+}
+
+/**
+ * Tira uma foto da Realidade Aumentada
+ */
+async function takeArPhoto() {
+  try {
+    // Efeito de flash na tela
+    if (ui.cameraFlash) {
+      ui.cameraFlash.classList.add('flash-active');
+      setTimeout(() => ui.cameraFlash.classList.remove('flash-active'), 200);
+    }
+
+    if (navigator.vibrate) {
+      navigator.vibrate([40, 20, 40]);
+    }
+
+    const canvas = captureCompositeFrame(1080);
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        alert('Não foi possível gerar a foto.');
+        return;
+      }
+
+      viewerState.currentCapturedBlob = blob;
+      viewerState.currentCapturedType = 'photo';
+      if (viewerState.currentCapturedUrl) {
+        URL.revokeObjectURL(viewerState.currentCapturedUrl);
+      }
+      viewerState.currentCapturedUrl = URL.createObjectURL(blob);
+
+      showCapturedMediaModal('photo', viewerState.currentCapturedUrl);
+    }, 'image/jpeg', 0.92);
+  } catch (err) {
+    console.error('Erro ao tirar foto WebAR:', err);
+    alert('Erro ao tirar foto: ' + err.message);
+  }
+}
+
+/**
+ * Alterna entre iniciar ou pausar a gravação de vídeo
+ */
+function toggleVideoRecording() {
+  if (viewerState.isRecording) {
+    stopArVideoRecording();
+  } else {
+    startArVideoRecording();
+  }
+}
+
+/**
+ * Inicia a gravação de vídeo do stream composto
+ */
+async function startArVideoRecording() {
+  try {
+    viewerState.recordedChunks = [];
+    viewerState.recordingSeconds = 0;
+
+    const screenW = window.innerWidth || 720;
+    const screenH = window.innerHeight || 1280;
+    const aspect = screenH / screenW;
+    const destW = 720;
+    const destH = Math.round(destW * aspect);
+
+    const recordCanvas = document.createElement('canvas');
+    recordCanvas.width = destW;
+    recordCanvas.height = destH;
+    const recordCtx = recordCanvas.getContext('2d', { alpha: false });
+
+    // Stream a 25 FPS
+    const stream = recordCanvas.captureStream(25);
+
+    // Conectar áudio do vídeo da experiência se estiver reproduzindo
+    const arVideo = document.querySelector('#ar-video-element');
+    if (arVideo && typeof arVideo.captureStream === 'function') {
+      try {
+        const audioStream = arVideo.captureStream();
+        const audioTracks = audioStream.getAudioTracks();
+        if (audioTracks.length > 0) {
+          stream.addTrack(audioTracks[0]);
+        }
+      } catch (audioErr) {
+        console.log('[WebAR] Áudio do vídeo não adicionado ao recorder:', audioErr);
+      }
+    }
+
+    // Detecção de formato de vídeo suportado
+    let mimeType = 'video/webm;codecs=vp9';
+    if (!MediaRecorder.isTypeSupported(mimeType)) {
+      mimeType = 'video/webm;codecs=vp8';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+        if (!MediaRecorder.isTypeSupported(mimeType)) {
+          mimeType = 'video/mp4';
+          if (!MediaRecorder.isTypeSupported(mimeType)) {
+            mimeType = '';
+          }
+        }
+      }
+    }
+
+    const options = mimeType ? { mimeType, videoBitsPerSecond: 2500000 } : undefined;
+    const recorder = new MediaRecorder(stream, options);
+
+    recorder.ondataavailable = (e) => {
+      if (e.data && e.data.size > 0) {
+        viewerState.recordedChunks.push(e.data);
+      }
+    };
+
+    recorder.onstop = () => {
+      finishVideoRecording(mimeType || 'video/webm');
+    };
+
+    viewerState.mediaRecorder = recorder;
+    viewerState.isRecording = true;
+    recorder.start(200);
+
+    // Loop de renderização frame a frame
+    const cameraVideo = Array.from(document.querySelectorAll('video')).find(v => v.id !== 'ar-video-element') || document.querySelector('video');
+    const arCanvas = document.querySelector('canvas.a-canvas') || document.querySelector('canvas');
+
+    function renderLoop() {
+      if (!viewerState.isRecording) return;
+
+      // 1. Câmera
+      if (cameraVideo && cameraVideo.videoWidth > 0) {
+        const vW = cameraVideo.videoWidth;
+        const vH = cameraVideo.videoHeight;
+        const vAspect = vH / vW;
+        let sW, sH, sX, sY;
+
+        if (vAspect > aspect) {
+          sW = vW;
+          sH = Math.round(vW * aspect);
+          sX = 0;
+          sY = Math.round((vH - sH) / 2);
+        } else {
+          sH = vH;
+          sW = Math.round(vH / aspect);
+          sX = Math.round((vW - sW) / 2);
+          sY = 0;
+        }
+        recordCtx.drawImage(cameraVideo, sX, sY, sW, sH, 0, 0, destW, destH);
+      } else {
+        recordCtx.fillStyle = '#0f172a';
+        recordCtx.fillRect(0, 0, destW, destH);
+      }
+
+      // 2. AR WebGL
+      if (arCanvas) {
+        recordCtx.drawImage(arCanvas, 0, 0, destW, destH);
+      }
+
+      // 3. Marca d'água escolar
+      drawWatermarkBadge(recordCtx, destW, destH);
+
+      requestAnimationFrame(renderLoop);
+    }
+    requestAnimationFrame(renderLoop);
+
+    updateRecordingUi(true, 0);
+
+    // Timer até 15 segundos
+    viewerState.recordingTimerId = setInterval(() => {
+      viewerState.recordingSeconds++;
+      updateRecordingUi(true, viewerState.recordingSeconds);
+
+      if (viewerState.recordingSeconds >= 15) {
+        stopArVideoRecording();
+      }
+    }, 1000);
+
+    if (navigator.vibrate) {
+      navigator.vibrate(60);
+    }
+  } catch (err) {
+    console.error('Falha ao iniciar gravação de vídeo WebAR:', err);
+    alert('Não foi possível iniciar a gravação de vídeo: ' + err.message);
+    viewerState.isRecording = false;
+    updateRecordingUi(false, 0);
+  }
+}
+
+/**
+ * Para a gravação de vídeo
+ */
+function stopArVideoRecording() {
+  if (!viewerState.isRecording) return;
+  viewerState.isRecording = false;
+
+  if (viewerState.recordingTimerId) {
+    clearInterval(viewerState.recordingTimerId);
+    viewerState.recordingTimerId = null;
+  }
+
+  updateRecordingUi(false, 0);
+
+  if (viewerState.mediaRecorder && viewerState.mediaRecorder.state !== 'inactive') {
+    viewerState.mediaRecorder.stop();
+  }
+
+  if (navigator.vibrate) {
+    navigator.vibrate([30, 40, 30]);
+  }
+}
+
+function updateRecordingUi(isRecording, seconds) {
+  if (!ui.btnRecordVideo || !ui.recordBtnText) return;
+
+  if (isRecording) {
+    ui.btnRecordVideo.classList.add('is-recording');
+    const formattedSec = String(seconds).padStart(2, '0');
+    ui.recordBtnText.textContent = `⏹️ Parar (00:${formattedSec} / 00:15)`;
+  } else {
+    ui.btnRecordVideo.classList.remove('is-recording');
+    ui.recordBtnText.textContent = '🔴 Gravar';
+  }
+}
+
+function finishVideoRecording(mimeType) {
+  const blob = new Blob(viewerState.recordedChunks, { type: mimeType });
+  viewerState.currentCapturedBlob = blob;
+  viewerState.currentCapturedType = 'video';
+  if (viewerState.currentCapturedUrl) {
+    URL.revokeObjectURL(viewerState.currentCapturedUrl);
+  }
+  viewerState.currentCapturedUrl = URL.createObjectURL(blob);
+
+  showCapturedMediaModal('video', viewerState.currentCapturedUrl);
+}
+
+// ==========================================================================
+// Modal de Mídia Capturada (Foto ou Vídeo) e Ações de Salvar / Compartilhar
+// ==========================================================================
+function showCapturedMediaModal(type, mediaUrl) {
+  if (!ui.modalCapturedMedia) return;
+
+  if (type === 'photo') {
+    if (ui.capturedMediaTitle) ui.capturedMediaTitle.textContent = '📸 Sua Foto WebAR';
+    if (ui.capturedPhotoImg) {
+      ui.capturedPhotoImg.src = mediaUrl;
+      ui.capturedPhotoImg.style.display = 'block';
+    }
+    if (ui.capturedVideoPlayer) {
+      ui.capturedVideoPlayer.pause();
+      ui.capturedVideoPlayer.style.display = 'none';
+    }
+  } else {
+    if (ui.capturedMediaTitle) ui.capturedMediaTitle.textContent = '🎬 Seu Vídeo WebAR';
+    if (ui.capturedPhotoImg) {
+      ui.capturedPhotoImg.style.display = 'none';
+    }
+    if (ui.capturedVideoPlayer) {
+      ui.capturedVideoPlayer.src = mediaUrl;
+      ui.capturedVideoPlayer.style.display = 'block';
+      ui.capturedVideoPlayer.play().catch(() => {});
+    }
+  }
+
+  ui.modalCapturedMedia.classList.add('active');
+}
+
+function closeCapturedMediaModal() {
+  if (!ui.modalCapturedMedia) return;
+  ui.modalCapturedMedia.classList.remove('active');
+  if (ui.capturedVideoPlayer) {
+    ui.capturedVideoPlayer.pause();
+  }
+}
+
+function downloadCapturedMedia() {
+  if (!viewerState.currentCapturedUrl) return;
+  const info = extractStudentInfo(viewerState.experience || {});
+  const safeName = (info.name || 'ubuntu').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const isPhoto = viewerState.currentCapturedType === 'photo';
+  const filename = isPhoto ? `foto-ubuntu-${safeName}.jpg` : `video-ubuntu-${safeName}.webm`;
+
+  const a = document.createElement('a');
+  a.href = viewerState.currentCapturedUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+async function shareCapturedMedia() {
+  if (!viewerState.currentCapturedBlob) return;
+
+  const info = extractStudentInfo(viewerState.experience || {});
+  const isPhoto = viewerState.currentCapturedType === 'photo';
+  const ext = isPhoto ? 'jpg' : 'webm';
+  const mime = isPhoto ? 'image/jpeg' : 'video/webm';
+  const safeName = (info.name || 'ubuntu').toLowerCase().replace(/[^a-z0-9]/g, '_');
+  const filename = `${isPhoto ? 'foto' : 'video'}-ubuntu-${safeName}.${ext}`;
+
+  const file = new File([viewerState.currentCapturedBlob], filename, { type: mime });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        title: 'Projeto UBUNTU — EMJPa WebAR',
+        text: `Veja essa lembrança em Realidade Aumentada do aluno(a) ${info.name}! ✨`,
+        files: [file]
+      });
+      return;
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        console.warn('Erro ao compartilhar nativamente:', err);
+      }
+    }
+  }
+
+  // Fallback: Baixa o arquivo e abre o WhatsApp
+  downloadCapturedMedia();
+  const textMsg = encodeURIComponent(`Olá! Acabei de registrar a apresentação em Realidade Aumentada do Projeto UBUNTU (${info.name})! Confira na minha galeria! ✨`);
+  window.open(`https://api.whatsapp.com/send?text=${textMsg}`, '_blank');
 }
 
 // ==========================================================================

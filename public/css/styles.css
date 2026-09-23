@@ -965,9 +965,11 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
   pointer-events: auto;
-  padding-bottom: 1rem;
+  padding: 0 0.75rem 1rem 0.75rem;
+  flex-wrap: wrap;
+  max-width: 100vw;
 }
 
 .floating-btn {
@@ -976,21 +978,26 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-subtle);
   color: #ffffff;
-  padding: 0.75rem 1.25rem;
+  padding: 0.65rem 1rem;
   border-radius: 999px;
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   font-weight: 600;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
   cursor: pointer;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: all 0.2s;
+  transition: all 0.2s ease;
+  white-space: nowrap;
 }
 
 .floating-btn:hover {
   background: rgba(30, 41, 59, 0.95);
   transform: translateY(-2px);
+}
+
+.floating-btn:active {
+  transform: translateY(0);
 }
 
 .btn-unmute-pulse {
@@ -1003,6 +1010,77 @@ body {
   0% { transform: scale(1); }
   50% { transform: scale(1.06); }
   100% { transform: scale(1); }
+}
+
+/* Botões de Captura de Mídia WebAR (Foto & Vídeo) */
+.btn-capture-photo {
+  background: rgba(14, 165, 233, 0.22);
+  border-color: rgba(56, 189, 248, 0.5);
+  color: #38bdf8;
+}
+
+.btn-capture-photo:hover {
+  background: rgba(14, 165, 233, 0.38);
+  box-shadow: 0 0 16px rgba(56, 189, 248, 0.4);
+}
+
+.btn-capture-record {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(248, 113, 113, 0.5);
+  color: #f87171;
+}
+
+.btn-capture-record:hover {
+  background: rgba(239, 68, 68, 0.35);
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.4);
+}
+
+.record-pulse-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #ef4444;
+  display: inline-block;
+}
+
+.btn-capture-record.is-recording {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+  color: #ffffff !important;
+  border-color: #f87171 !important;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.75);
+  animation: pulseRecording 1s infinite;
+}
+
+.btn-capture-record.is-recording .record-pulse-dot {
+  background: #ffffff;
+  animation: blinkRecording 0.8s infinite;
+}
+
+@keyframes pulseRecording {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+
+@keyframes blinkRecording {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.2; }
+}
+
+/* Flash da Câmera ao Tirar Foto */
+.camera-flash {
+  position: fixed;
+  inset: 0;
+  background: #ffffff;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 99999;
+  transition: opacity 0.25s ease-out;
+}
+
+.camera-flash.flash-active {
+  opacity: 0.92;
+  transition: none;
 }
 
 /* ==========================================================================

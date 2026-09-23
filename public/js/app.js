@@ -29,6 +29,7 @@ const state = {
     fitMode: 'match',
     loop: true,
     audioDefault: 'muted',
+    chromaKey: 'none',
     model3dFile: null
   }
 };
@@ -83,6 +84,7 @@ const dom = {
   selectFitMode: document.getElementById('select-fit-mode'),
   checkLoop: document.getElementById('check-loop'),
   selectAudioDefault: document.getElementById('select-audio-default'),
+  selectChromaKey: document.getElementById('select-chroma-key'),
   btnSaveExperience: document.getElementById('btn-save-experience'),
   
   // Modal QR Code
@@ -572,6 +574,7 @@ async function saveExperience() {
   const fitMode = dom.selectFitMode.value;
   const loop = dom.checkLoop.checked;
   const audioDefault = dom.selectAudioDefault.value;
+  const chromaKey = dom.selectChromaKey ? dom.selectChromaKey.value : 'none';
 
   dom.btnSaveExperience.disabled = true;
   dom.btnSaveExperience.innerHTML = `
@@ -588,6 +591,7 @@ async function saveExperience() {
     formData.append('fitMode', fitMode);
     formData.append('loop', loop);
     formData.append('audioDefault', audioDefault);
+    formData.append('chromaKey', chromaKey);
 
     // Anexar os arquivos
     formData.append('targetImage', imageFile);

@@ -352,7 +352,8 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       fitMode,
       loop,
       audioDefault,
-      model3dScale
+      model3dScale,
+      chromaKey
     } = req.body;
 
     const files = req.files;
@@ -418,6 +419,7 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       mindTargetUrl,
       model3dUrl,
       model3dScale: model3dScale || '0.35 0.35 0.35',
+      chromaKey: chromaKey || 'none',
       targetWidth: width,
       targetHeight: height,
       aspectRatio,
