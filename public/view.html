@@ -115,37 +115,59 @@
       <img id="reticle-thumb" class="reticle-preview-img" src="" alt="Silhueta da Arte">
     </div>
 
-    <!-- Barra Inferior de Controles de Mídia & Captura -->
+    <!-- Barra Inferior de Controles de Mídia & Captura (Dock Estilo Câmera de Smartphone) -->
     <div class="webar-bottom-bar">
-      <!-- Botão de Áudio Pulsante (Resolve restrições de autoplay do Safari e Chrome móvel) -->
-      <button id="btn-audio" class="floating-btn btn-unmute-pulse">
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
-        <span>🔊 Som</span>
-      </button>
+      <!-- Pílula de Modo Superior: Cenário Vivo (Pessoa na frente) -->
+      <div class="webar-mode-container">
+        <button id="btn-toggle-live-set" class="webar-mode-pill" title="Alternar modo Cenário Vivo (Pessoa na frente do mural)">
+          <span class="mode-pill-sparkle">✨</span>
+          <span id="live-set-btn-text">Cenário Vivo (Pessoa na Frente)</span>
+        </button>
+      </div>
 
-      <!-- Botão de Play / Pause -->
-      <button id="btn-play-pause" class="floating-btn">
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <span>Pausar</span>
-      </button>
+      <!-- Dock Principal de Câmera em Linha Única -->
+      <div class="webar-camera-dock">
+        <!-- Utilitário 1: Áudio (Mute / Unmute) -->
+        <button id="btn-audio" class="dock-btn-util btn-unmute-pulse" title="Ativar ou Desativar Som">
+          <div class="dock-util-icon-circle" id="audio-icon-wrap">
+            <svg class="dock-svg" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+            </svg>
+          </div>
+          <span class="dock-util-label" id="audio-btn-label">Som</span>
+        </button>
 
-      <!-- Botão Cenário Vivo / Chroma Key ao Vivo (Pessoa na frente) -->
-      <button id="btn-toggle-live-set" class="floating-btn btn-live-set" title="Alternar modo Cenário Vivo (Pessoa na frente)">
-        <span id="live-set-btn-icon">🎬</span>
-        <span id="live-set-btn-text">Cenário Vivo</span>
-      </button>
+        <!-- Disparo Principal: Tirar Foto (Shutter Branco) -->
+        <button id="btn-take-photo" class="dock-shutter-btn shutter-photo" title="Tirar Foto WebAR">
+          <div class="shutter-outer-ring">
+            <div class="shutter-inner-core">
+              <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                <circle cx="12" cy="13" r="4" stroke-width="2"/>
+              </svg>
+            </div>
+          </div>
+          <span class="dock-shutter-label">Foto</span>
+        </button>
 
-      <!-- Botão de Tirar Foto -->
-      <button id="btn-take-photo" class="floating-btn btn-capture-photo" title="Tirar foto com o efeito de Realidade Aumentada">
-        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="4" stroke-width="2"/></svg>
-        <span>📸 Foto</span>
-      </button>
+        <!-- Disparo Principal: Gravar Vídeo (Shutter Vermelho 15s) -->
+        <button id="btn-record-video" class="dock-shutter-btn shutter-record" title="Gravar Vídeo de 15 segundos">
+          <div class="shutter-outer-ring record-ring">
+            <div class="shutter-inner-core record-core" id="record-core-visual"></div>
+          </div>
+          <span class="dock-shutter-label" id="record-btn-text">Gravar</span>
+        </button>
 
-      <!-- Botão de Gravar Vídeo (Até 15s) -->
-      <button id="btn-record-video" class="floating-btn btn-capture-record" title="Gravar clipe de vídeo para WhatsApp ou Instagram">
-        <span class="record-pulse-dot"></span>
-        <span id="record-btn-text">🔴 Gravar</span>
-      </button>
+        <!-- Utilitário 2: Play / Pause -->
+        <button id="btn-play-pause" class="dock-btn-util" title="Pausar ou Reproduzir Animação">
+          <div class="dock-util-icon-circle" id="play-pause-icon-wrap">
+            <svg class="dock-svg" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </div>
+          <span class="dock-util-label" id="play-pause-btn-label">Pausar</span>
+        </button>
+      </div>
     </div>
   </div>
 

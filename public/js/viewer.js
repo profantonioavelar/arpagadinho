@@ -151,7 +151,11 @@ const ui = {
   studentRoom: document.getElementById('student-room-display'),
   titleBadge: document.getElementById('title-badge'),
   btnAudio: document.getElementById('btn-audio'),
+  audioIconWrap: document.getElementById('audio-icon-wrap'),
+  audioBtnLabel: document.getElementById('audio-btn-label'),
   btnPlayPause: document.getElementById('btn-play-pause'),
+  playPauseIconWrap: document.getElementById('play-pause-icon-wrap'),
+  playPauseBtnLabel: document.getElementById('play-pause-btn-label'),
   btnToggleLiveSet: document.getElementById('btn-toggle-live-set'),
   liveSetBtnText: document.getElementById('live-set-btn-text'),
   personCanvas: document.getElementById('person-foreground-canvas'),
@@ -547,10 +551,10 @@ async function enableLiveSet(enable) {
   if (ui.btnToggleLiveSet) {
     if (viewerState.isLiveSetActive) {
       ui.btnToggleLiveSet.classList.add('is-active');
-      if (ui.liveSetBtnText) ui.liveSetBtnText.textContent = '🎬 Cenário Ativo';
+      if (ui.liveSetBtnText) ui.liveSetBtnText.textContent = 'Cenário Vivo Ativo';
     } else {
       ui.btnToggleLiveSet.classList.remove('is-active');
-      if (ui.liveSetBtnText) ui.liveSetBtnText.textContent = '🎬 Cenário Vivo';
+      if (ui.liveSetBtnText) ui.liveSetBtnText.textContent = 'Cenário Vivo (Pessoa na Frente)';
     }
   }
 
@@ -707,17 +711,26 @@ function toggleAudio() {
   viewerState.isAudioMuted = videoEl.muted;
 
   if (videoEl.muted) {
-    ui.btnAudio.innerHTML = `
-      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/></svg>
-      <span>🔇 Ativar Som</span>
-    `;
-    ui.btnAudio.classList.remove('btn-unmute-pulse');
+    if (ui.audioIconWrap) {
+      ui.audioIconWrap.innerHTML = `
+        <svg class="dock-svg" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"/>
+        </svg>
+      `;
+    }
+    if (ui.audioBtnLabel) ui.audioBtnLabel.textContent = 'Som';
+    if (ui.btnAudio) ui.btnAudio.classList.add('btn-unmute-pulse');
   } else {
-    ui.btnAudio.innerHTML = `
-      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/></svg>
-      <span>🔊 Som Ativo</span>
-    `;
-    ui.btnAudio.classList.remove('btn-unmute-pulse');
+    if (ui.audioIconWrap) {
+      ui.audioIconWrap.innerHTML = `
+        <svg class="dock-svg" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+        </svg>
+      `;
+    }
+    if (ui.audioBtnLabel) ui.audioBtnLabel.textContent = 'Som';
+    if (ui.btnAudio) ui.btnAudio.classList.remove('btn-unmute-pulse');
   }
 }
 
@@ -740,15 +753,24 @@ function updatePlayPauseButtonState(isPlaying) {
   if (!ui.btnPlayPause) return;
 
   if (isPlaying) {
-    ui.btnPlayPause.innerHTML = `
-      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      <span>Pausar</span>
-    `;
+    if (ui.playPauseIconWrap) {
+      ui.playPauseIconWrap.innerHTML = `
+        <svg class="dock-svg" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      `;
+    }
+    if (ui.playPauseBtnLabel) ui.playPauseBtnLabel.textContent = 'Pausar';
   } else {
-    ui.btnPlayPause.innerHTML = `
-      <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      <span>Reproduzir</span>
-    `;
+    if (ui.playPauseIconWrap) {
+      ui.playPauseIconWrap.innerHTML = `
+        <svg class="dock-svg" width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      `;
+    }
+    if (ui.playPauseBtnLabel) ui.playPauseBtnLabel.textContent = 'Play';
   }
 }
 
@@ -1075,10 +1097,10 @@ function updateRecordingUi(isRecording, seconds) {
   if (isRecording) {
     ui.btnRecordVideo.classList.add('is-recording');
     const formattedSec = String(seconds).padStart(2, '0');
-    ui.recordBtnText.textContent = `⏹️ Parar (00:${formattedSec} / 00:15)`;
+    ui.recordBtnText.textContent = `00:${formattedSec}`;
   } else {
     ui.btnRecordVideo.classList.remove('is-recording');
-    ui.recordBtnText.textContent = '🔴 Gravar';
+    ui.recordBtnText.textContent = 'Gravar';
   }
 }
 
