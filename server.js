@@ -371,7 +371,8 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       loop,
       audioDefault,
       model3dScale,
-      chromaKey
+      chromaKey,
+      backdropMode
     } = req.body;
 
     const files = req.files;
@@ -447,6 +448,7 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       model3dUrl,
       model3dScale: model3dScale || '0.35 0.35 0.35',
       chromaKey: chromaKey || 'none',
+      backdropMode: backdropMode || 'none',
       targetWidth: width,
       targetHeight: height,
       aspectRatio,

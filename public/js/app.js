@@ -85,6 +85,7 @@ const dom = {
   checkLoop: document.getElementById('check-loop'),
   selectAudioDefault: document.getElementById('select-audio-default'),
   selectChromaKey: document.getElementById('select-chroma-key'),
+  selectBackdropMode: document.getElementById('select-backdrop-mode'),
   btnSaveExperience: document.getElementById('btn-save-experience'),
   
   // Modal QR Code
@@ -575,6 +576,7 @@ async function saveExperience() {
   const loop = dom.checkLoop.checked;
   const audioDefault = dom.selectAudioDefault.value;
   const chromaKey = dom.selectChromaKey ? dom.selectChromaKey.value : 'none';
+  const backdropMode = dom.selectBackdropMode ? dom.selectBackdropMode.value : 'none';
 
   dom.btnSaveExperience.disabled = true;
   dom.btnSaveExperience.innerHTML = `
@@ -592,6 +594,7 @@ async function saveExperience() {
     formData.append('loop', loop);
     formData.append('audioDefault', audioDefault);
     formData.append('chromaKey', chromaKey);
+    formData.append('backdropMode', backdropMode);
 
     // Anexar os arquivos
     formData.append('targetImage', imageFile);

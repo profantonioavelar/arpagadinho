@@ -404,6 +404,24 @@
             </select>
           </div>
 
+          <!-- Modo de Cenário Vivo / Chroma Key ao Vivo (Pessoa em 1º plano) -->
+          <div class="form-group" style="background: rgba(14, 165, 233, 0.08); border: 1px dashed rgba(56, 189, 248, 0.4); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.25rem;">
+            <label class="form-label" for="select-backdrop-mode" style="display: flex; align-items: center; justify-content: space-between; color: #38bdf8;">
+              <span style="font-weight: 700;">🎬 Modo de Exibição / Cenário Vivo (Pessoa na Frente)</span>
+              <span style="font-size: 0.72rem; background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 2px 8px; border-radius: 9999px; font-weight: 700;">Estúdio Virtual</span>
+            </label>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.4;">
+              Define se a pessoa fica <strong>na frente do mural animado</strong> (como em um chroma key de cinema ao vivo):
+            </p>
+            <select id="select-backdrop-mode" class="form-select">
+              <option value="none" selected>Padrão — Vídeo sobreposto à arte física (Cartões e Desenhos em mesa)</option>
+              <option value="live_set">🌟 Cenário Vivo — A pessoa fica na FRENTE e o mural vira fundo animado (Chroma Key ao Vivo com IA)</option>
+            </select>
+            <div style="margin-top: 0.65rem; padding: 0.6rem 0.75rem; background: rgba(0,0,0,0.25); border-radius: var(--radius-sm); font-size: 0.78rem; color: #94a3b8; line-height: 1.45;">
+              💡 <strong>Dica para Murais:</strong> Ao fotografar o mural no Passo 1, enquadre também os tijolinhos/parede nas laterais e acima da arte. Assim, mesmo quando o aluno ficar no meio, a câmera continua lendo os cantos da parede e o cenário não pisca!
+            </div>
+          </div>
+
           <!-- Efeito de Fundo do Vídeo (Chroma Key / Mural Vivo) -->
           <div class="form-group" style="background: rgba(16, 185, 129, 0.08); border: 1px dashed rgba(16, 185, 129, 0.4); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.25rem;">
             <label class="form-label" for="select-chroma-key" style="display: flex; align-items: center; justify-content: space-between; color: #10b981;">

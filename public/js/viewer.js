@@ -131,7 +131,13 @@ const viewerState = {
   recordingSeconds: 0,
   currentCapturedBlob: null,
   currentCapturedType: null, // 'photo' | 'video'
-  currentCapturedUrl: null
+  currentCapturedUrl: null,
+  // Modo Cenário Vivo (Pessoa na frente / Chroma Key ao Vivo com IA)
+  isLiveSetActive: false,
+  selfieSegmentation: null,
+  isProcessingSegmentation: false,
+  liveSetLoopRunning: false,
+  targetLostGraceTimer: null
 };
 
 // Elementos DOM
@@ -146,6 +152,9 @@ const ui = {
   titleBadge: document.getElementById('title-badge'),
   btnAudio: document.getElementById('btn-audio'),
   btnPlayPause: document.getElementById('btn-play-pause'),
+  btnToggleLiveSet: document.getElementById('btn-toggle-live-set'),
+  liveSetBtnText: document.getElementById('live-set-btn-text'),
+  personCanvas: document.getElementById('person-foreground-canvas'),
   btnShowArtwork: document.getElementById('btn-show-artwork'),
   modalArtwork: document.getElementById('modal-artwork'),
   artworkModalImg: document.getElementById('artwork-modal-img'),
@@ -261,6 +270,13 @@ async function initViewer() {
 
     // Inicializar cena A-Frame e MindAR
     buildAndMountArScene(exp);
+
+    // Ativar Cenário Vivo se configurado no estúdio ou na URL (?liveset=1)
+    const shouldEnableLiveSet = (exp.backdropMode === 'live_set') || (urlParams.get('liveset') === '1');
+    if (shouldEnableLiveSet) {
+      console.log('[WebAR] Modo Cenário Vivo habilitado para esta experiência.');
+      enableLiveSet(true);
+    }
   } catch (err) {
     console.error('Erro ao carregar experiência WebAR:', err);
     showError(err.message || 'Falha ao carregar experiência de Realidade Aumentada.');
@@ -290,6 +306,11 @@ function setupUiListeners() {
   // Controle de Play / Pause
   if (ui.btnPlayPause) {
     ui.btnPlayPause.addEventListener('click', togglePlayPause);
+  }
+
+  // Alternar Cenário Vivo (Pessoa na frente / Chroma Key ao Vivo com IA)
+  if (ui.btnToggleLiveSet) {
+    ui.btnToggleLiveSet.addEventListener('click', toggleLiveSet);
   }
 
   // Captura de Foto
@@ -359,9 +380,10 @@ function buildAndMountArScene(exp) {
   console.log(`[WebAR] Configurando cena: largura=${width}, altura=${height.toFixed(4)}, chromaKey=${chroma}`);
 
   // Montar HTML da cena A-Frame com preserveDrawingBuffer para suporte à captura de foto e vídeo
+  // missTolerance: 25 estende a tolerância para pessoas em frente a murais
   const sceneHtml = `
     <a-scene
-      mindar-image="imageTargetSrc: ${exp.mindTargetUrl}; filterMinCF: 0.0001; filterBeta: 0.001; uiScanning: no; autoStart: true;"
+      mindar-image="imageTargetSrc: ${exp.mindTargetUrl}; filterMinCF: 0.0001; filterBeta: 0.001; missTolerance: 25; uiScanning: no; autoStart: true;"
       color-space="sRGB"
       renderer="preserveDrawingBuffer: true; colorManagement: true; physicallyCorrectLights: true;"
       vr-mode-ui="enabled: false"
@@ -417,7 +439,7 @@ function buildAndMountArScene(exp) {
 }
 
 // ==========================================================================
-// Eventos MindAR (Detecção e Perda do Marcador Físico)
+// Eventos MindAR (Detecção, Perda e Tolerância Suave a Oclusão)
 // ==========================================================================
 function setupMindArEvents(sceneEl, targetEntity, videoEl) {
   if (!targetEntity || !videoEl) return;
@@ -445,13 +467,17 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
   // Evento: Marcador detectado pela câmera
   targetEntity.addEventListener('targetFound', () => {
     console.log('[WebAR] 🎯 Marcador encontrado!');
+    if (viewerState.targetLostGraceTimer) {
+      clearTimeout(viewerState.targetLostGraceTimer);
+      viewerState.targetLostGraceTimer = null;
+    }
     viewerState.isTargetFound = true;
 
     if (ui.statusBadge) {
       ui.statusBadge.className = 'webar-status-badge status-found';
     }
     if (ui.statusText) {
-      ui.statusText.textContent = '✨ Arte detectada!';
+      ui.statusText.textContent = viewerState.isLiveSetActive ? '✨ Cenário Vivo Sincronizado!' : '✨ Arte detectada!';
     }
     if (ui.reticle) {
       ui.reticle.classList.add('hidden');
@@ -469,30 +495,204 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
     }
   });
 
-  // Evento: Marcador perdido (saiu do enquadramento da câmera)
+  // Evento: Marcador temporariamente fora de vista
+  // Aplica Grace Period de 4s para permitir poses e movimentos na frente do mural sem cortar o vídeo
   targetEntity.addEventListener('targetLost', () => {
-    console.log('[WebAR] 🔍 Marcador perdido.');
-    viewerState.isTargetFound = false;
+    console.log('[WebAR] 🔍 Marcador momentaneamente ocluso (iniciando tolerância de persistência)...');
+    if (viewerState.targetLostGraceTimer) clearTimeout(viewerState.targetLostGraceTimer);
 
-    if (ui.statusBadge) {
-      ui.statusBadge.className = 'webar-status-badge status-hunting';
-    }
-    if (ui.statusText) {
-      ui.statusText.textContent = 'Aponte a câmera para a imagem impressa';
-    }
-    if (ui.reticle) {
-      ui.reticle.classList.remove('hidden');
-    }
+    const graceDuration = viewerState.isLiveSetActive ? 4000 : 1800;
 
-    videoEl.pause();
-    viewerState.isVideoPlaying = false;
-    updatePlayPauseButtonState(false);
+    viewerState.targetLostGraceTimer = setTimeout(() => {
+      viewerState.targetLostGraceTimer = null;
+      console.log('[WebAR] 🔍 Marcador perdido após tolerância.');
+      viewerState.isTargetFound = false;
+
+      if (ui.statusBadge) {
+        ui.statusBadge.className = 'webar-status-badge status-hunting';
+      }
+      if (ui.statusText) {
+        ui.statusText.textContent = viewerState.isLiveSetActive 
+          ? 'Aponte para o mural para sincronizar o cenário' 
+          : 'Aponte a câmera para a imagem impressa';
+      }
+      if (ui.reticle) {
+        ui.reticle.classList.remove('hidden');
+      }
+
+      videoEl.pause();
+      viewerState.isVideoPlaying = false;
+      updatePlayPauseButtonState(false);
+    }, graceDuration);
   });
 
   sceneEl.addEventListener('arError', (e) => {
     console.error('[WebAR] Erro de AR:', e);
     showError('Não foi possível acessar a câmera. Verifique as permissões do navegador e se a conexão é segura (HTTPS).');
   });
+}
+
+// ==========================================================================
+// Módulo Cenário Vivo (Live Virtual Set / Chroma Key Reverso com IA)
+// Mantém a pessoa real em 1º plano e o mural animado atrás dela
+// ==========================================================================
+
+function toggleLiveSet() {
+  enableLiveSet(!viewerState.isLiveSetActive);
+}
+
+async function enableLiveSet(enable) {
+  viewerState.isLiveSetActive = !!enable;
+
+  if (ui.btnToggleLiveSet) {
+    if (viewerState.isLiveSetActive) {
+      ui.btnToggleLiveSet.classList.add('is-active');
+      if (ui.liveSetBtnText) ui.liveSetBtnText.textContent = '🎬 Cenário Ativo';
+    } else {
+      ui.btnToggleLiveSet.classList.remove('is-active');
+      if (ui.liveSetBtnText) ui.liveSetBtnText.textContent = '🎬 Cenário Vivo';
+    }
+  }
+
+  if (ui.personCanvas) {
+    ui.personCanvas.style.display = viewerState.isLiveSetActive ? 'block' : 'none';
+  }
+
+  if (viewerState.isLiveSetActive) {
+    console.log('[LiveSet] Modo Cenário Vivo ATIVADO. Inicializando IA...');
+    await initSelfieSegmentation();
+    startLiveSegmentationLoop();
+  } else {
+    console.log('[LiveSet] Modo Cenário Vivo DESATIVADO.');
+    viewerState.liveSetLoopRunning = false;
+    if (ui.personCanvas) {
+      const ctx = ui.personCanvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, ui.personCanvas.width, ui.personCanvas.height);
+    }
+  }
+}
+
+async function initSelfieSegmentation() {
+  if (viewerState.selfieSegmentation) return;
+
+  // Fallback caso o script MediaPipe ainda não tenha finalizado o download
+  if (typeof SelfieSegmentation === 'undefined') {
+    console.log('[LiveSet] Aguardando biblioteca SelfieSegmentation...');
+    await new Promise((resolve) => {
+      let waitCount = 0;
+      const checkInterval = setInterval(() => {
+        waitCount++;
+        if (typeof SelfieSegmentation !== 'undefined' || waitCount > 30) {
+          clearInterval(checkInterval);
+          resolve();
+        }
+      }, 100);
+    });
+  }
+
+  if (typeof SelfieSegmentation === 'undefined') {
+    console.warn('[LiveSet] SelfieSegmentation não disponível no navegador.');
+    return;
+  }
+
+  try {
+    const segmenter = new SelfieSegmentation({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+    });
+
+    segmenter.setOptions({
+      modelSelection: 1, // 1: Landscape (ideal para pessoas em pé/corpo médio em frente a murais)
+      selfieMode: false
+    });
+
+    segmenter.onResults(onSelfieResults);
+    viewerState.selfieSegmentation = segmenter;
+    console.log('[LiveSet] ✓ IA de Segmentação inicializada com sucesso!');
+  } catch (err) {
+    console.error('[LiveSet] Erro ao inicializar SelfieSegmentation:', err);
+  }
+}
+
+function onSelfieResults(results) {
+  if (!viewerState.isLiveSetActive || !ui.personCanvas) return;
+
+  const canvas = ui.personCanvas;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  const displayW = window.innerWidth;
+  const displayH = window.innerHeight;
+
+  if (canvas.width !== displayW || canvas.height !== displayH) {
+    canvas.width = displayW;
+    canvas.height = displayH;
+  }
+
+  const vW = results.image.width || results.image.videoWidth || displayW;
+  const vH = results.image.height || results.image.videoHeight || displayH;
+
+  const screenAspect = displayH / displayW;
+  const videoAspect = vH / vW;
+  let sW, sH, sX, sY;
+
+  if (videoAspect > screenAspect) {
+    sW = vW;
+    sH = Math.round(vW * screenAspect);
+    sX = 0;
+    sY = Math.round((vH - sH) / 2);
+  } else {
+    sH = vH;
+    sW = Math.round(vH / screenAspect);
+    sX = Math.round((vW - sW) / 2);
+    sY = 0;
+  }
+
+  ctx.save();
+  ctx.clearRect(0, 0, displayW, displayH);
+
+  // 1. Desenha a máscara da silhueta da pessoa
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.drawImage(results.segmentationMask, sX, sY, sW, sH, 0, 0, displayW, displayH);
+
+  // 2. Isola a pessoa real com 'source-in'
+  ctx.globalCompositeOperation = 'source-in';
+  ctx.drawImage(results.image, sX, sY, sW, sH, 0, 0, displayW, displayH);
+
+  ctx.restore();
+}
+
+function startLiveSegmentationLoop() {
+  if (viewerState.liveSetLoopRunning) return;
+  viewerState.liveSetLoopRunning = true;
+
+  function findCamera() {
+    return Array.from(document.querySelectorAll('video')).find(v => v.id !== 'ar-video-element' && v.videoWidth > 0);
+  }
+
+  async function step() {
+    if (!viewerState.isLiveSetActive || !viewerState.liveSetLoopRunning) {
+      viewerState.liveSetLoopRunning = false;
+      return;
+    }
+
+    const cameraVideo = findCamera();
+    if (cameraVideo && cameraVideo.readyState >= 2 && !cameraVideo.paused && !viewerState.isProcessingSegmentation) {
+      if (viewerState.selfieSegmentation) {
+        viewerState.isProcessingSegmentation = true;
+        try {
+          await viewerState.selfieSegmentation.send({ image: cameraVideo });
+        } catch (e) {
+          // Frame drop tolerado suavemente
+        } finally {
+          viewerState.isProcessingSegmentation = false;
+        }
+      }
+    }
+
+    requestAnimationFrame(step);
+  }
+
+  requestAnimationFrame(step);
 }
 
 // ==========================================================================
@@ -648,7 +848,12 @@ function captureCompositeFrame(targetWidth = 1080) {
     ctx.drawImage(arCanvas, 0, 0, destW, destH);
   }
 
-  // 3. Marca d'água de lembrança comemorativa
+  // 3. Sobrepor a pessoa real em primeiro plano se o modo Cenário Vivo estiver ativo
+  if (ui.personCanvas && ui.personCanvas.style.display !== 'none' && ui.personCanvas.width > 0) {
+    ctx.drawImage(ui.personCanvas, 0, 0, destW, destH);
+  }
+
+  // 4. Marca d'água de lembrança comemorativa
   drawWatermarkBadge(ctx, destW, destH);
 
   return canvas;
@@ -806,7 +1011,12 @@ async function startArVideoRecording() {
         recordCtx.drawImage(arCanvas, 0, 0, destW, destH);
       }
 
-      // 3. Marca d'água escolar
+      // 3. Sobrepor a pessoa real em primeiro plano se o modo Cenário Vivo estiver ativo
+      if (ui.personCanvas && ui.personCanvas.style.display !== 'none' && ui.personCanvas.width > 0) {
+        recordCtx.drawImage(ui.personCanvas, 0, 0, destW, destH);
+      }
+
+      // 4. Marca d'água escolar
       drawWatermarkBadge(recordCtx, destW, destH);
 
       requestAnimationFrame(renderLoop);
