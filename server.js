@@ -90,7 +90,25 @@ function getExperiences() {
       return [];
     }
     const data = fs.readFileSync(DATA_FILE, 'utf8');
-    return JSON.parse(data || '[]');
+    const experiences = JSON.parse(data || '[]');
+
+    // Auto-cura protetiva: se Cloudinary estiver ativo e algum vídeo tiver ficado com caminho relativo /uploads/
+    if (isCloudinaryEnabled()) {
+      const cName = getCloudinaryStatus().cloudName;
+      if (cName) {
+        experiences.forEach(exp => {
+          if (exp.overlayVideoUrl && exp.overlayVideoUrl.startsWith('/uploads/') && exp.id) {
+            // Se a imagem alvo ou o mind vierem do Cloudinary, o vídeo também pertence à nuvem
+            if (exp.targetImageUrl && exp.targetImageUrl.includes('cloudinary')) {
+              exp.overlayVideoUrl = `https://res.cloudinary.com/${cName}/video/upload/arpagadinho/${exp.id}/video.mp4`;
+              exp.isPermanent = true;
+            }
+          }
+        });
+      }
+    }
+
+    return experiences;
   } catch (err) {
     console.error('Erro ao ler experiências:', err);
     return [];
@@ -393,7 +411,16 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
         if (cVid) overlayVideoUrl = cVid;
         if (cMind) mindTargetUrl = cMind;
         if (cModel) model3dUrl = cModel;
-        console.log(`[Cloudinary] ✓ Arquivos salvos permanentemente na nuvem com sucesso!`);
+
+        // Se o Cloudinary estiver ativo e o vídeo por algum motivo não tiver retornado URL http, gerar a URL canônica garantida
+        if (isCloudinaryEnabled() && !overlayVideoUrl.startsWith('http')) {
+          const cName = getCloudinaryStatus().cloudName;
+          if (cName) {
+            overlayVideoUrl = `https://res.cloudinary.com/${cName}/video/upload/arpagadinho/${expId}/video.mp4`;
+          }
+        }
+
+        console.log(`[Cloudinary] ✓ Arquivos salvos permanentemente na nuvem com sucesso! Video: ${overlayVideoUrl}`);
       } catch (uploadErr) {
         console.error('[Cloudinary] Falha ao enviar para nuvem:', uploadErr.message);
         warningMessage = `Atenção: A experiência foi salva temporariamente no servidor local, mas o envio permanente para a nuvem falhou (${uploadErr.message}).`;

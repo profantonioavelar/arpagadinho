@@ -28,8 +28,13 @@ if (typeof AFRAME !== 'undefined' && (!AFRAME.shaders || !AFRAME.shaders['chroma
           videoTexture = data.src;
         }
       }
+      if (!videoTexture) {
+        const defaultEl = document.querySelector('#ar-video-element');
+        if (defaultEl) videoTexture = new THREE.VideoTexture(defaultEl);
+      }
       if (videoTexture) {
         videoTexture.minFilter = THREE.LinearFilter;
+        videoTexture.generateMipmaps = false;
       }
       this.material = new THREE.ShaderMaterial({
         uniforms: {
@@ -38,6 +43,7 @@ if (typeof AFRAME !== 'undefined' && (!AFRAME.shaders || !AFRAME.shaders['chroma
           smoothness: { value: data.smoothness },
           myTexture: { value: videoTexture }
         },
+        side: THREE.DoubleSide,
         vertexShader: `
           varying vec2 vUv;
           void main(void) {
@@ -76,8 +82,8 @@ if (typeof AFRAME !== 'undefined' && (!AFRAME.shaders || !AFRAME.shaders['chroma
     },
     update: function (data) {
       if (this.material && this.material.uniforms) {
+        let videoTexture = null;
         if (data.src) {
-          let videoTexture = null;
           if (data.src instanceof HTMLVideoElement) {
             videoTexture = new THREE.VideoTexture(data.src);
           } else if (typeof data.src === 'string') {
@@ -86,10 +92,15 @@ if (typeof AFRAME !== 'undefined' && (!AFRAME.shaders || !AFRAME.shaders['chroma
           } else if (data.src.isTexture) {
             videoTexture = data.src;
           }
-          if (videoTexture) {
-            videoTexture.minFilter = THREE.LinearFilter;
-            this.material.uniforms.myTexture.value = videoTexture;
-          }
+        }
+        if (!videoTexture) {
+          const defaultEl = document.querySelector('#ar-video-element');
+          if (defaultEl) videoTexture = new THREE.VideoTexture(defaultEl);
+        }
+        if (videoTexture) {
+          videoTexture.minFilter = THREE.LinearFilter;
+          videoTexture.generateMipmaps = false;
+          this.material.uniforms.myTexture.value = videoTexture;
         }
         if (data.color) {
           this.material.uniforms.color.value = new THREE.Color(data.color.x, data.color.y, data.color.z);
@@ -412,6 +423,20 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
   if (!targetEntity || !videoEl) return;
 
   videoEl.load();
+
+  videoEl.addEventListener('error', (e) => {
+    console.error('[WebAR] Falha ao carregar o vídeo:', videoEl.error);
+    if (ui.statusBadge) {
+      ui.statusBadge.className = 'webar-status-badge status-hunting';
+    }
+    if (ui.statusText) {
+      ui.statusText.textContent = '⚠️ Vídeo indisponível (404). Recarregue a página.';
+    }
+  });
+
+  videoEl.addEventListener('canplay', () => {
+    console.log('[WebAR] ✓ Arquivo de vídeo carregado e pronto para exibição.');
+  });
 
   sceneEl.addEventListener('renderstart', () => {
     console.log('[WebAR] Cena A-Frame iniciada.');

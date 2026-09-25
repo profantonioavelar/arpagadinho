@@ -67,30 +67,58 @@ async function uploadToCloudinary(localFilePath, publicId, resourceType = 'auto'
   if (!isCloudinaryEnabled()) return null;
 
   try {
-    // Para vídeos grandes (até 40MB), usar upload_large com chunking para evitar timeout de rede
-    if (resourceType === 'video') {
-      const result = await cloudinary.uploader.upload_large(localFilePath, {
-        public_id: publicId,
-        resource_type: 'video',
-        overwrite: true,
-        invalidate: true,
-        chunk_size: 6000000, // 6 MB por chunk
-        timeout: 180000 // 3 minutos
-      });
-      return result.secure_url;
-    }
+    console.log(`[Cloudinary] Enviando ${localFilePath} (${resourceType}) para public_id: ${publicId}...`);
 
-    // Para imagens e arquivos raw (.mind, .json, .glb)
+    // 1. Tentar upload direto nativo (suporta image, video até 100MB e raw com Promise nativa)
     const result = await cloudinary.uploader.upload(localFilePath, {
       public_id: publicId,
       resource_type: resourceType,
       overwrite: true,
       invalidate: true,
-      timeout: 120000
+      timeout: 240000
     });
-    return result.secure_url;
+
+    if (result && result.secure_url) {
+      console.log(`[Cloudinary] ✓ Upload direto concluído: ${result.secure_url}`);
+      return result.secure_url;
+    }
+    throw new Error('Upload direto concluído sem secure_url retornada');
   } catch (err) {
-    console.error(`[Cloudinary] Erro ao enviar ${localFilePath} (${resourceType}):`, err.message);
+    console.warn(`[Cloudinary] Upload direto de ${resourceType} avisou: ${err.message}.`);
+
+    // 2. Se for vídeo grande e falhar no upload direto, tentar upload_large com callback envelopado em Promise
+    if (resourceType === 'video') {
+      try {
+        console.log(`[Cloudinary] Tentando upload_large chunked para ${localFilePath}...`);
+        const largeResult = await new Promise((resolve, reject) => {
+          // Nota importante: upload_large recebe (path, callback, options)
+          cloudinary.uploader.upload_large(localFilePath, (error, res) => {
+            if (error) {
+              console.error('[Cloudinary] Erro no callback upload_large:', error);
+              return reject(error);
+            }
+            if (!res || !res.secure_url) {
+              return reject(new Error('upload_large chunked terminou sem secure_url'));
+            }
+            resolve(res.secure_url);
+          }, {
+            public_id: publicId,
+            resource_type: 'video',
+            overwrite: true,
+            invalidate: true,
+            chunk_size: 6000000,
+            timeout: 300000
+          });
+        });
+
+        if (largeResult) {
+          console.log(`[Cloudinary] ✓ upload_large chunked concluído: ${largeResult}`);
+          return largeResult;
+        }
+      } catch (largeErr) {
+        console.error('[Cloudinary] Falha no fallback upload_large:', largeErr.message);
+      }
+    }
     throw err;
   }
 }
@@ -181,11 +209,18 @@ async function restoreDatabaseFromCloudinary(localDbPath) {
             }
           } catch (e) {}
 
-          const merged = [...data];
+          let merged = [...data];
           for (const item of localData) {
             if (!merged.some(e => e.id === item.id)) {
               merged.push(item);
             }
+          }
+
+          // Auto-cura de experiências: se o vídeo aponta para /uploads/ mas já foi salvo no Cloudinary, atualizar a URL
+          const healed = await healExperiences(merged);
+          if (healed) {
+            console.log('[Cloudinary] ✓ Experiências recuperadas e reparadas com links permanentes da nuvem!');
+            syncDatabaseToCloudinary(merged).catch(() => {});
           }
 
           fs.writeFileSync(localDbPath, JSON.stringify(merged, null, 2), 'utf8');
@@ -201,10 +236,71 @@ async function restoreDatabaseFromCloudinary(localDbPath) {
   console.log('[Cloudinary] Nenhum banco de dados prévio encontrado na nuvem para restauração.');
 }
 
+/**
+ * Verifica e repara links de experiências que ficaram apontando para o disco local (/uploads/)
+ * substituindo por URLs do Cloudinary se o arquivo já existir lá.
+ */
+async function healExperiences(experiences) {
+  if (!Array.isArray(experiences) || !isCloudinaryEnabled()) return false;
+  const currentCreds = getCredentials();
+  const cName = currentCreds.cloudName;
+  if (!cName) return false;
+
+  let changed = false;
+  for (const exp of experiences) {
+    // 1. Corrigir vídeo local se existir na nuvem
+    if (exp.overlayVideoUrl && exp.overlayVideoUrl.startsWith('/uploads/')) {
+      const candidateUrls = [
+        `https://res.cloudinary.com/${cName}/video/upload/arpagadinho/${exp.id}/video.mp4`,
+        `https://res.cloudinary.com/${cName}/video/upload/arpagadinho/${exp.id}/video`
+      ];
+      for (const candidate of candidateUrls) {
+        try {
+          const res = await fetch(candidate, { method: 'HEAD' });
+          if (res.ok) {
+            console.log(`[Cloudinary] ✓ Auto-cura: Atualizado vídeo de "${exp.title}" (${exp.id}) para ${candidate}`);
+            exp.overlayVideoUrl = candidate;
+            exp.isPermanent = true;
+            changed = true;
+            break;
+          }
+        } catch (e) {}
+      }
+    }
+
+    // 2. Corrigir targets.mind local se existir na nuvem
+    if (exp.mindTargetUrl && exp.mindTargetUrl.startsWith('/uploads/')) {
+      const candidateMind = `https://res.cloudinary.com/${cName}/raw/upload/arpagadinho/${exp.id}/targets.mind`;
+      try {
+        const res = await fetch(candidateMind, { method: 'HEAD' });
+        if (res.ok) {
+          exp.mindTargetUrl = candidateMind;
+          changed = true;
+        }
+      } catch (e) {}
+    }
+
+    // 3. Corrigir imagem alvo local se existir na nuvem
+    if (exp.targetImageUrl && exp.targetImageUrl.startsWith('/uploads/')) {
+      const candidateImg = `https://res.cloudinary.com/${cName}/image/upload/arpagadinho/${exp.id}/image.jpg`;
+      try {
+        const res = await fetch(candidateImg, { method: 'HEAD' });
+        if (res.ok) {
+          exp.targetImageUrl = candidateImg;
+          changed = true;
+        }
+      } catch (e) {}
+    }
+  }
+
+  return changed;
+}
+
 module.exports = {
   isCloudinaryEnabled,
   getCloudinaryStatus,
   uploadToCloudinary,
   syncDatabaseToCloudinary,
-  restoreDatabaseFromCloudinary
+  restoreDatabaseFromCloudinary,
+  healExperiences
 };
