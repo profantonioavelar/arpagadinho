@@ -158,6 +158,7 @@ const ui = {
   playPauseBtnLabel: document.getElementById('play-pause-btn-label'),
   btnToggleLiveSet: document.getElementById('btn-toggle-live-set'),
   liveSetBtnText: document.getElementById('live-set-btn-text'),
+  modeContainerLiveSet: document.getElementById('mode-container-live-set'),
   personCanvas: document.getElementById('person-foreground-canvas'),
   btnShowArtwork: document.getElementById('btn-show-artwork'),
   modalArtwork: document.getElementById('modal-artwork'),
@@ -275,10 +276,16 @@ async function initViewer() {
     // Inicializar cena A-Frame e MindAR
     buildAndMountArScene(exp);
 
-    // Ativar Cenário Vivo se configurado no estúdio ou na URL (?liveset=1)
-    const shouldEnableLiveSet = (exp.backdropMode === 'live_set') || (urlParams.get('liveset') === '1');
-    if (shouldEnableLiveSet) {
-      console.log('[WebAR] Modo Cenário Vivo habilitado para esta experiência.');
+    // Exibir o seletor do modo Cenário Vivo apenas para experiências compatíveis
+    const isLiveSetSupported = (exp.backdropMode === 'live_set') || (urlParams.get('liveset') === '1');
+    if (isLiveSetSupported && ui.modeContainerLiveSet) {
+      ui.modeContainerLiveSet.style.display = 'flex';
+    }
+
+    // Por padrão o visualizador inicia no modo nativo ultra-nítido a 60 FPS (sem sobreposições).
+    // O usuário ativa com 1 toque no botão se houver alguém na frente, ou via ?liveset=1.
+    if (urlParams.get('liveset') === '1') {
+      console.log('[WebAR] Modo Cenário Vivo habilitado via URL.');
       enableLiveSet(true);
     }
   } catch (err) {
@@ -500,12 +507,12 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
   });
 
   // Evento: Marcador temporariamente fora de vista
-  // Aplica Grace Period de 4s para permitir poses e movimentos na frente do mural sem cortar o vídeo
+  // Tolerância suave de 800ms: absorve movimentos rápidos sem travar a imagem flutuando no chão
   targetEntity.addEventListener('targetLost', () => {
-    console.log('[WebAR] 🔍 Marcador momentaneamente ocluso (iniciando tolerância de persistência)...');
+    console.log('[WebAR] 🔍 Marcador momentaneamente ocluso (iniciando tolerância)...');
     if (viewerState.targetLostGraceTimer) clearTimeout(viewerState.targetLostGraceTimer);
 
-    const graceDuration = viewerState.isLiveSetActive ? 4000 : 1800;
+    const graceDuration = 800;
 
     viewerState.targetLostGraceTimer = setTimeout(() => {
       viewerState.targetLostGraceTimer = null;
@@ -635,6 +642,9 @@ function onSelfieResults(results) {
   const vW = results.image.width || results.image.videoWidth || displayW;
   const vH = results.image.height || results.image.videoHeight || displayH;
 
+  const maskW = (results.segmentationMask && results.segmentationMask.width) ? results.segmentationMask.width : vW;
+  const maskH = (results.segmentationMask && results.segmentationMask.height) ? results.segmentationMask.height : vH;
+
   const screenAspect = displayH / displayW;
   const videoAspect = vH / vW;
   let sW, sH, sX, sY;
@@ -651,12 +661,20 @@ function onSelfieResults(results) {
     sY = 0;
   }
 
+  // Escalar as coordenadas de corte proporcionalmente para o tamanho da máscara do MediaPipe
+  const scaleX = maskW / vW;
+  const scaleY = maskH / vH;
+  const msX = Math.round(sX * scaleX);
+  const msY = Math.round(sY * scaleY);
+  const msW = Math.round(sW * scaleX);
+  const msH = Math.round(sH * scaleY);
+
   ctx.save();
   ctx.clearRect(0, 0, displayW, displayH);
 
-  // 1. Desenha a máscara da silhueta da pessoa
+  // 1. Desenha a máscara da silhueta da pessoa com o enquadramento exato
   ctx.globalCompositeOperation = 'source-over';
-  ctx.drawImage(results.segmentationMask, sX, sY, sW, sH, 0, 0, displayW, displayH);
+  ctx.drawImage(results.segmentationMask, msX, msY, msW, msH, 0, 0, displayW, displayH);
 
   // 2. Isola a pessoa real com 'source-in'
   ctx.globalCompositeOperation = 'source-in';
