@@ -377,9 +377,48 @@
 
         <!-- Passo 4: Configurações & Publicação -->
         <div class="wizard-panel" data-panel="4" style="display: none;">
+          <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.85rem; margin-bottom: 1rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="input-student-name">
+                <span>👤 Nome do Aluno / Arte</span>
+                <span style="color: var(--accent-indigo); font-weight: normal;">*</span>
+              </label>
+              <input type="text" id="input-student-name" class="form-input" placeholder="Ex: Gata, Maria Clara, Pedro" required>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="input-student-room">
+                <span>🏫 Turma / Sala</span>
+                <span style="color: #a855f7; font-weight: normal;">(Editável)</span>
+              </label>
+              <input type="text" id="input-student-room" class="form-input" placeholder="Ex: Sala 12, 5º Ano B, Sala 3" list="common-rooms-list">
+              <datalist id="common-rooms-list">
+                <option value="Sala 01">
+                <option value="Sala 02">
+                <option value="Sala 03">
+                <option value="Sala 04">
+                <option value="Sala 05">
+                <option value="Sala 06">
+                <option value="Sala 07">
+                <option value="Sala 08">
+                <option value="Sala 09">
+                <option value="Sala 10">
+                <option value="Sala 11">
+                <option value="Sala 12">
+                <option value="1º Ano A">
+                <option value="2º Ano A">
+                <option value="3º Ano A">
+                <option value="4º Ano A">
+                <option value="5º Ano A">
+              </datalist>
+            </div>
+          </div>
+
           <div class="form-group">
-            <label class="form-label" for="input-title">Título da Experiência</label>
-            <input type="text" id="input-title" class="form-input" placeholder="Ex: Cartão Postal Cyberpunk" required>
+            <label class="form-label" for="input-title">Título Completo da Experiência</label>
+            <input type="text" id="input-title" class="form-input" placeholder="Ex: Gata - Sala 12" required>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem;">
+              Preenchido automaticamente com o Nome e a Sala acima, ou você pode personalizar diretamente.
+            </p>
           </div>
 
           <div class="form-group">
@@ -658,6 +697,39 @@
           <p style="font-size: 0.85rem; color: #d1fae5; margin: 0.35rem 0 0;">
             Você pode clicar no botão <strong>"📥 Fazer Backup (JSON)"</strong> no topo do estúdio a qualquer momento para baixar um arquivo com todos os dados e links das artes para o seu computador.
           </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Edição Rápida de Turma / Sala e Identificação -->
+  <div id="modal-edit-experience" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 class="modal-title">✏️ Editar Turma / Sala e Nome do Aluno</h3>
+        <button id="modal-edit-close" class="modal-close" aria-label="Fechar">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-exp-id">
+        <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.85rem; margin-bottom: 1rem;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="edit-student-name">👤 Nome do Aluno / Arte</label>
+            <input type="text" id="edit-student-name" class="form-input" placeholder="Ex: Gata, Pedro">
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="edit-student-room">🏫 Turma / Sala</label>
+            <input type="text" id="edit-student-room" class="form-input" placeholder="Ex: Sala 12, 5º Ano B" list="common-rooms-list">
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="edit-exp-title">Título Completo na Exposição</label>
+          <input type="text" id="edit-exp-title" class="form-input" placeholder="Ex: Gata - Sala 12">
+        </div>
+        <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
+          <button type="button" id="btn-cancel-edit-exp" class="btn btn-secondary">Cancelar</button>
+          <button type="button" id="btn-save-edit-exp" class="btn btn-primary">✓ Salvar Alterações</button>
         </div>
       </div>
     </div>

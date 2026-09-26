@@ -79,6 +79,8 @@ const dom = {
   btnStep3Next: document.getElementById('btn-step3-next'),
   
   // Step 4: Configurações & Salvar
+  inputStudentName: document.getElementById('input-student-name'),
+  inputStudentRoom: document.getElementById('input-student-room'),
   inputTitle: document.getElementById('input-title'),
   inputDescription: document.getElementById('input-description'),
   selectFitMode: document.getElementById('select-fit-mode'),
@@ -87,6 +89,16 @@ const dom = {
   selectChromaKey: document.getElementById('select-chroma-key'),
   selectBackdropMode: document.getElementById('select-backdrop-mode'),
   btnSaveExperience: document.getElementById('btn-save-experience'),
+  
+  // Modal Edição Rápida de Sala/Aluno
+  modalEditExp: document.getElementById('modal-edit-experience'),
+  modalEditClose: document.getElementById('modal-edit-close'),
+  editExpId: document.getElementById('edit-exp-id'),
+  editStudentName: document.getElementById('edit-student-name'),
+  editStudentRoom: document.getElementById('edit-student-room'),
+  editExpTitle: document.getElementById('edit-exp-title'),
+  btnCancelEditExp: document.getElementById('btn-cancel-edit-exp'),
+  btnSaveEditExp: document.getElementById('btn-save-edit-exp'),
   
   // Modal QR Code
   qrTitle: document.getElementById('qr-title'),
@@ -215,6 +227,47 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Sincronização automática do Título no Wizard (Nome + Sala)
+  const syncWizardTitle = () => {
+    const name = dom.inputStudentName ? dom.inputStudentName.value.trim() : '';
+    const room = dom.inputStudentRoom ? dom.inputStudentRoom.value.trim() : '';
+    if (dom.inputTitle && !dom.inputTitle.dataset.customized) {
+      if (name && room) dom.inputTitle.value = `${name} - ${room}`;
+      else if (name) dom.inputTitle.value = name;
+      else if (room) dom.inputTitle.value = room;
+    }
+  };
+  if (dom.inputStudentName) dom.inputStudentName.addEventListener('input', syncWizardTitle);
+  if (dom.inputStudentRoom) dom.inputStudentRoom.addEventListener('input', syncWizardTitle);
+  if (dom.inputTitle) {
+    dom.inputTitle.addEventListener('input', () => {
+      dom.inputTitle.dataset.customized = 'true';
+    });
+  }
+
+  // Sincronização automática do Título no Modal de Edição
+  const syncEditTitle = () => {
+    const name = dom.editStudentName ? dom.editStudentName.value.trim() : '';
+    const room = dom.editStudentRoom ? dom.editStudentRoom.value.trim() : '';
+    if (dom.editExpTitle && !dom.editExpTitle.dataset.customized) {
+      if (name && room) dom.editExpTitle.value = `${name} - ${room}`;
+      else if (name) dom.editExpTitle.value = name;
+      else if (room) dom.editExpTitle.value = room;
+    }
+  };
+  if (dom.editStudentName) dom.editStudentName.addEventListener('input', syncEditTitle);
+  if (dom.editStudentRoom) dom.editStudentRoom.addEventListener('input', syncEditTitle);
+  if (dom.editExpTitle) {
+    dom.editExpTitle.addEventListener('input', () => {
+      dom.editExpTitle.dataset.customized = 'true';
+    });
+  }
+
+  // Ações do Modal de Edição de Sala/Aluno
+  if (dom.modalEditClose) dom.modalEditClose.addEventListener('click', () => closeModal(dom.modalEditExp));
+  if (dom.btnCancelEditExp) dom.btnCancelEditExp.addEventListener('click', () => closeModal(dom.modalEditExp));
+  if (dom.btnSaveEditExp) dom.btnSaveEditExp.addEventListener('click', saveEditedExperience);
 
   // Wizard Step 4: Salvar Experiência
   if (dom.btnSaveExperience) {
@@ -398,6 +451,7 @@ function renderExperiencesGrid() {
           <h3 class="exp-title">${escapeHtml(exp.title)}</h3>
           <p class="exp-desc">${escapeHtml(exp.description || 'Sem descrição cadastrada.')}</p>
           <div class="exp-meta">
+            ${exp.studentClass ? `<span style="background: rgba(168, 85, 247, 0.15); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.35); padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 700; font-size: 0.78rem;">🏫 ${escapeHtml(exp.studentClass)}</span>` : ''}
             <span>📅 ${dateFormatted}</span>
             <span>📐 Proporção: ${exp.aspectRatio ? exp.aspectRatio.toFixed(2) : '1.00'}</span>
           </div>
@@ -415,6 +469,10 @@ function renderExperiencesGrid() {
               Cartão
             </a>
             ${!exp.isDemo ? `
+              <button class="btn btn-secondary btn-sm btn-action-edit-room" data-id="${exp.id}" title="Editar Sala ou Nome do Aluno">
+                <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                Editar Sala
+              </button>
               <button class="btn btn-danger btn-sm btn-full btn-action-delete" data-id="${exp.id}">
                 <svg width="14" height="14" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                 Excluir
@@ -431,9 +489,63 @@ function renderExperiencesGrid() {
     btn.addEventListener('click', () => openQrModal(btn.dataset.id));
   });
 
+  document.querySelectorAll('.btn-action-edit-room').forEach(btn => {
+    btn.addEventListener('click', () => openEditExpModal(btn.dataset.id));
+  });
+
   document.querySelectorAll('.btn-action-delete').forEach(btn => {
     btn.addEventListener('click', () => deleteExperience(btn.dataset.id));
   });
+}
+
+function openEditExpModal(id) {
+  const exp = state.experiences.find(e => e.id === id);
+  if (!exp) return;
+
+  dom.editExpId.value = exp.id;
+  dom.editStudentName.value = exp.studentName || '';
+  dom.editStudentRoom.value = exp.studentClass || '';
+  dom.editExpTitle.value = exp.title || '';
+  if (dom.editExpTitle) delete dom.editExpTitle.dataset.customized;
+
+  openModal(dom.modalEditExp);
+}
+
+async function saveEditedExperience() {
+  const id = dom.editExpId.value;
+  const studentName = dom.editStudentName.value.trim();
+  const studentClass = dom.editStudentRoom.value.trim();
+  let title = dom.editExpTitle.value.trim();
+
+  if (!id) return;
+  if (!title) {
+    title = studentClass ? `${studentName || 'Estudante'} - ${studentClass}` : (studentName || 'Experiência AR');
+  }
+
+  dom.btnSaveEditExp.disabled = true;
+  dom.btnSaveEditExp.textContent = 'Salvando alterações...';
+
+  try {
+    const res = await fetch(`/api/experiences/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ studentName, studentClass, title })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || 'Falha ao atualizar experiência.');
+    }
+
+    closeModal(dom.modalEditExp);
+    await loadExperiences();
+  } catch (err) {
+    console.error('Erro ao atualizar experiência:', err);
+    alert('Erro ao atualizar: ' + err.message);
+  } finally {
+    dom.btnSaveEditExp.disabled = false;
+    dom.btnSaveEditExp.textContent = '✓ Salvar Alterações';
+  }
 }
 
 // ==========================================================================
@@ -570,7 +682,13 @@ async function saveExperience() {
     return;
   }
 
-  const title = dom.inputTitle.value.trim() || 'Experiência AR Sem Título';
+  const studentName = dom.inputStudentName ? dom.inputStudentName.value.trim() : '';
+  const studentClass = dom.inputStudentRoom ? dom.inputStudentRoom.value.trim() : '';
+  let title = dom.inputTitle ? dom.inputTitle.value.trim() : '';
+  if (!title) {
+    title = studentClass ? `${studentName || 'Estudante'} - ${studentClass}` : (studentName || 'Experiência AR Sem Título');
+  }
+
   const description = dom.inputDescription.value.trim();
   const fitMode = dom.selectFitMode.value;
   const loop = dom.checkLoop.checked;
@@ -587,6 +705,8 @@ async function saveExperience() {
   try {
     const formData = new FormData();
     formData.append('title', title);
+    formData.append('studentName', studentName);
+    formData.append('studentClass', studentClass);
     formData.append('description', description);
     formData.append('targetWidth', imageWidth);
     formData.append('targetHeight', imageHeight);
@@ -694,7 +814,12 @@ function resetWizard() {
 
   if (dom.inputImage) dom.inputImage.value = '';
   if (dom.inputVideo) dom.inputVideo.value = '';
-  if (dom.inputTitle) dom.inputTitle.value = '';
+  if (dom.inputStudentName) dom.inputStudentName.value = '';
+  if (dom.inputStudentRoom) dom.inputStudentRoom.value = '';
+  if (dom.inputTitle) {
+    dom.inputTitle.value = '';
+    delete dom.inputTitle.dataset.customized;
+  }
   if (dom.inputDescription) dom.inputDescription.value = '';
   if (dom.previewImageBox) dom.previewImageBox.style.display = 'none';
   if (dom.previewVideoBox) dom.previewVideoBox.style.display = 'none';

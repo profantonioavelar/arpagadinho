@@ -185,26 +185,24 @@ const ui = {
 // Helpers de Extração e Ajuste de Retículo
 // ==========================================================================
 function extractStudentInfo(exp) {
-  let name = exp.studentName || '';
-  let room = exp.studentClass || '';
+  let name = (exp.studentName || '').trim();
+  let room = (exp.studentClass || '').trim();
 
   if (!name && exp.title) {
     if (exp.title.includes(' - ')) {
       const parts = exp.title.split(' - ');
       name = parts[0].trim();
-      room = parts.slice(1).join(' - ').trim();
+      if (!room) room = parts.slice(1).join(' - ').trim();
     } else if (exp.title.includes(' • ')) {
       const parts = exp.title.split(' • ');
       name = parts[0].trim();
-      room = parts.slice(1).join(' • ').trim();
+      if (!room) room = parts.slice(1).join(' • ').trim();
     } else {
-      name = exp.title;
-      room = 'SALA 12';
+      name = exp.title.trim();
     }
   }
 
   if (!name) name = 'Estudante EMJPa';
-  if (!room) room = 'SALA 12';
 
   return { name, room };
 }
@@ -213,11 +211,12 @@ function adjustReticleSize(aspectRatio) {
   if (!ui.reticle) return;
   const viewportWidth = window.innerWidth;
   const viewportHeight = window.innerHeight;
-  const maxReticleWidth = Math.min(viewportWidth * 0.88, 420);
+  // Expansão lateral ampla para cobrir desenhos/cartões na horizontal
+  const maxReticleWidth = Math.min(viewportWidth * 0.95, 540);
 
   if (aspectRatio && aspectRatio > 0) {
     let calcHeight = maxReticleWidth * aspectRatio;
-    const maxAllowedHeight = viewportHeight * 0.52;
+    const maxAllowedHeight = viewportHeight * 0.58;
     if (calcHeight > maxAllowedHeight) {
       calcHeight = maxAllowedHeight;
       const calcWidth = calcHeight / aspectRatio;
@@ -228,8 +227,8 @@ function adjustReticleSize(aspectRatio) {
     ui.reticle.style.width = `${Math.round(maxReticleWidth)}px`;
     ui.reticle.style.height = `${Math.round(calcHeight)}px`;
   } else {
-    ui.reticle.style.width = 'min(88vw, 420px)';
-    ui.reticle.style.height = 'min(88vw, 420px)';
+    ui.reticle.style.width = 'min(95vw, 540px)';
+    ui.reticle.style.height = 'min(95vw, 540px)';
   }
 }
 
@@ -259,8 +258,19 @@ async function initViewer() {
     // Atualizar UI com Nome do Estudante e Sala da EMJPa
     const { name, room } = extractStudentInfo(exp);
     if (ui.studentName) ui.studentName.textContent = name;
-    if (ui.studentRoom) ui.studentRoom.textContent = room;
-    if (ui.titleBadge) ui.titleBadge.textContent = `${name} - ${room}`;
+    const roomDivider = document.getElementById('student-room-divider');
+    if (ui.studentRoom) {
+      if (room) {
+        ui.studentRoom.textContent = room;
+        ui.studentRoom.style.display = 'inline-block';
+        if (roomDivider) roomDivider.style.display = 'inline-block';
+      } else {
+        ui.studentRoom.textContent = '';
+        ui.studentRoom.style.display = 'none';
+        if (roomDivider) roomDivider.style.display = 'none';
+      }
+    }
+    if (ui.titleBadge) ui.titleBadge.textContent = room ? `${name} - ${room}` : name;
 
     // Configurar tamanho responsivo e proporcional do retículo ampliado
     adjustReticleSize(exp.aspectRatio);

@@ -148,7 +148,45 @@ async function runTests() {
     });
     assert(authedStudioRes.status === 200, 'Professor autenticado consegue acessar /studio.html diretamente (200 OK)');
 
-    // 8. Teste de Logout
+    // 8. Teste de Edição de Turma/Sala (PATCH /api/experiences/:id)
+    // Sem auth -> 401
+    const unauthPatchRes = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/experiences/demo-card-tech',
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }
+    }, { studentClass: 'Sala 05' });
+    assert(unauthPatchRes.status === 401, 'Tentativa de editar sala sem autenticação bloqueada (401)');
+
+    // Com auth -> 200
+    const authedPatchRes = await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/experiences/demo-card-tech',
+      method: 'PATCH',
+      headers: {
+        'Cookie': cookieStr,
+        'Content-Type': 'application/json'
+      }
+    }, { studentClass: 'Sala 05', studentName: 'Arte Teste' });
+    assert(authedPatchRes.status === 200, 'Professor autenticado consegue editar Sala e Nome via PATCH (200 OK)');
+    const patchData = JSON.parse(authedPatchRes.body);
+    assert(patchData.experience && patchData.experience.studentClass === 'Sala 05', 'studentClass foi atualizado para "Sala 05" com sucesso');
+
+    // Restaurar sala original da demo
+    await request({
+      hostname: 'localhost',
+      port: PORT,
+      path: '/api/experiences/demo-card-tech',
+      method: 'PATCH',
+      headers: {
+        'Cookie': cookieStr,
+        'Content-Type': 'application/json'
+      }
+    }, { studentClass: 'SALA 12', studentName: 'Arte Interativa Ubuntu', title: 'Cartão Postal Futurista (Vídeo + Objeto 3D)' });
+
+    // 9. Teste de Logout
     const logoutRes = await request({
       hostname: 'localhost',
       port: PORT,

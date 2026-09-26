@@ -431,14 +431,14 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       console.warn('[Storage] AVISO: Gravando experiência em modo temporário (sem Cloudinary).');
     }
 
-    const parsedName = studentName || (title && title.includes(' - ') ? title.split(' - ')[0].trim() : (title || 'Estudante'));
-    const parsedClass = studentClass || (title && title.includes(' - ') ? title.split(' - ').slice(1).join(' - ').trim() : 'SALA 12');
+    const parsedName = (studentName && studentName.trim()) || (title && title.includes(' - ') ? title.split(' - ')[0].trim() : (title ? title.trim() : 'Estudante'));
+    const parsedClass = (studentClass && studentClass.trim()) || (title && title.includes(' - ') ? title.split(' - ').slice(1).join(' - ').trim() : '');
 
     const isPermanent = Boolean(isCloudinaryEnabled() && targetImageUrl.startsWith('http') && overlayVideoUrl.startsWith('http'));
 
     const newExperience = {
       id: expId,
-      title: title || `${parsedName} - ${parsedClass}`,
+      title: title || (parsedClass ? `${parsedName} - ${parsedClass}` : parsedName),
       studentName: parsedName,
       studentClass: parsedClass,
       description: description || '',
@@ -509,6 +509,38 @@ app.delete('/api/experiences/:id', requireAuthApi, (req, res) => {
   }
 
   res.json({ success: true, message: 'Experiência removida com sucesso' });
+});
+
+// Atualizar metadados da experiência (Apenas professor - Turma/Sala, Nome do Aluno, Título)
+app.patch('/api/experiences/:id', requireAuthApi, (req, res) => {
+  const { id } = req.params;
+  const { title, studentName, studentClass, description } = req.body;
+  const experiences = getExperiences();
+  const exp = experiences.find(e => e.id === id);
+
+  if (!exp) {
+    return res.status(404).json({ error: 'Experiência não encontrada' });
+  }
+
+  if (studentName !== undefined) exp.studentName = String(studentName).trim();
+  if (studentClass !== undefined) exp.studentClass = String(studentClass).trim();
+
+  if (title !== undefined && String(title).trim()) {
+    exp.title = String(title).trim();
+  } else if (studentName !== undefined || studentClass !== undefined) {
+    const sName = exp.studentName || 'Estudante';
+    exp.title = exp.studentClass ? `${sName} - ${exp.studentClass}` : sName;
+  }
+
+  if (description !== undefined) exp.description = String(description).trim();
+
+  saveExperiences(experiences);
+
+  if (isCloudinaryEnabled()) {
+    syncDatabaseToCloudinary(experiences).catch(e => console.warn(e));
+  }
+
+  res.json({ success: true, experience: exp });
 });
 
 // Gerar QR Code para uma experiência
