@@ -531,10 +531,14 @@
 
           <!-- Cabeçalho do Cartão -->
           <div class="card-top-row">
-            <div class="card-title-group">
-              <div class="card-expo-title">${escapeHtml(printData.expoName || 'Projeto UBUNTU')}</div>
-              <div class="card-school-year">${escapeHtml(printData.schoolName || 'EMJPa - 2026')}</div>
-              ${studentName ? `<div class="card-student-tag">${escapeHtml(studentName)}</div>` : ''}
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 32px; height: 32px; object-fit: contain;">
+              <img src="/assets/simbolo_ubuntu.png" alt="Ubuntu" style="width: 28px; height: 28px; object-fit: contain;">
+              <div class="card-title-group">
+                <div class="card-expo-title">${escapeHtml(printData.expoName || 'Projeto UBUNTU')}</div>
+                <div class="card-school-year">${escapeHtml(printData.schoolName || 'EMJPa - 2026')}</div>
+                ${studentName ? `<div class="card-student-tag">${escapeHtml(studentName)}</div>` : ''}
+              </div>
             </div>
 
             <div class="card-room-group">
@@ -561,7 +565,7 @@
 
           <!-- Rodapé -->
           <div class="card-footer-text">
-            🎨 ARpagadinho • Realidade Aumentada
+            ✨ ARpagadinho • Projeto UBUNTU • "Eu sou porque nós somos"
           </div>
         </div>
       `;

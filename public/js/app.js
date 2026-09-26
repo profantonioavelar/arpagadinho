@@ -269,6 +269,17 @@ function setupEventListeners() {
   if (dom.btnCancelEditExp) dom.btnCancelEditExp.addEventListener('click', () => closeModal(dom.modalEditExp));
   if (dom.btnSaveEditExp) dom.btnSaveEditExp.addEventListener('click', saveEditedExperience);
 
+  // Ações do Modal de Identidade Visual Ubuntu
+  const btnOpenIdentity = document.getElementById('btn-open-identity-modal');
+  const modalIdentity = document.getElementById('modal-visual-identity');
+  const btnCloseIdentity = document.getElementById('modal-identity-close');
+  if (btnOpenIdentity && modalIdentity) {
+    btnOpenIdentity.addEventListener('click', () => openModal(modalIdentity));
+  }
+  if (btnCloseIdentity && modalIdentity) {
+    btnCloseIdentity.addEventListener('click', () => closeModal(modalIdentity));
+  }
+
   // Wizard Step 4: Salvar Experiência
   if (dom.btnSaveExperience) {
     dom.btnSaveExperience.addEventListener('click', saveExperience);
