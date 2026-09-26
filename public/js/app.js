@@ -30,7 +30,8 @@ const state = {
     loop: true,
     audioDefault: 'muted',
     chromaKey: 'none',
-    model3dFile: null
+    model3dFile: null,
+    customLogoFile: null
   }
 };
 
@@ -88,15 +89,22 @@ const dom = {
   selectAudioDefault: document.getElementById('select-audio-default'),
   selectChromaKey: document.getElementById('select-chroma-key'),
   selectBackdropMode: document.getElementById('select-backdrop-mode'),
+  inputCustomLogo: document.getElementById('input-custom-logo'),
+  previewCustomLogoWrap: document.getElementById('preview-custom-logo-wrap'),
+  previewCustomLogoThumb: document.getElementById('preview-custom-logo-thumb'),
+  btnRemoveCustomLogo: document.getElementById('btn-remove-custom-logo'),
   btnSaveExperience: document.getElementById('btn-save-experience'),
   
-  // Modal Edição Rápida de Sala/Aluno
+  // Modal Edição Rápida de Sala/Aluno/Logo
   modalEditExp: document.getElementById('modal-edit-experience'),
   modalEditClose: document.getElementById('modal-edit-close'),
   editExpId: document.getElementById('edit-exp-id'),
   editStudentName: document.getElementById('edit-student-name'),
   editStudentRoom: document.getElementById('edit-student-room'),
   editExpTitle: document.getElementById('edit-exp-title'),
+  editLogoPreview: document.getElementById('edit-logo-preview'),
+  editCustomLogoInput: document.getElementById('edit-custom-logo-input'),
+  btnEditRemoveLogo: document.getElementById('btn-edit-remove-logo'),
   btnCancelEditExp: document.getElementById('btn-cancel-edit-exp'),
   btnSaveEditExp: document.getElementById('btn-save-edit-exp'),
   
@@ -228,6 +236,56 @@ function setupEventListeners() {
     });
   }
 
+  // Wizard Step 4: Logo personalizada opcional (Tela de Carregamento)
+  if (dom.inputCustomLogo) {
+    dom.inputCustomLogo.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        state.wizardData.customLogoFile = file;
+        if (dom.previewCustomLogoThumb && dom.previewCustomLogoWrap) {
+          dom.previewCustomLogoThumb.src = URL.createObjectURL(file);
+          dom.previewCustomLogoWrap.style.display = 'flex';
+        }
+      } else {
+        state.wizardData.customLogoFile = null;
+        if (dom.previewCustomLogoWrap) dom.previewCustomLogoWrap.style.display = 'none';
+      }
+    });
+  }
+
+  if (dom.btnRemoveCustomLogo) {
+    dom.btnRemoveCustomLogo.addEventListener('click', () => {
+      state.wizardData.customLogoFile = null;
+      if (dom.inputCustomLogo) dom.inputCustomLogo.value = '';
+      if (dom.previewCustomLogoWrap) dom.previewCustomLogoWrap.style.display = 'none';
+    });
+  }
+
+  // Modal de Edição: Upload e Remoção de Logo
+  if (dom.editCustomLogoInput) {
+    dom.editCustomLogoInput.addEventListener('change', (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (file) {
+        delete dom.modalEditExp.dataset.removeLogo;
+        if (dom.editLogoPreview) {
+          dom.editLogoPreview.src = URL.createObjectURL(file);
+        }
+        if (dom.btnEditRemoveLogo) {
+          dom.btnEditRemoveLogo.style.display = 'inline-block';
+        }
+      }
+    });
+  }
+
+  if (dom.btnEditRemoveLogo) {
+    dom.btnEditRemoveLogo.addEventListener('click', () => {
+      dom.modalEditExp.dataset.removeLogo = 'true';
+      if (dom.editCustomLogoInput) dom.editCustomLogoInput.value = '';
+      if (dom.editLogoPreview) dom.editLogoPreview.src = '/assets/mascote_apagadinho.png';
+      dom.btnEditRemoveLogo.style.display = 'none';
+    });
+  }
+
   // Sincronização automática do Título no Wizard (Nome + Sala)
   const syncWizardTitle = () => {
     const name = dom.inputStudentName ? dom.inputStudentName.value.trim() : '';
@@ -264,21 +322,10 @@ function setupEventListeners() {
     });
   }
 
-  // Ações do Modal de Edição de Sala/Aluno
+  // Ações do Modal de Edição de Sala/Aluno/Logo
   if (dom.modalEditClose) dom.modalEditClose.addEventListener('click', () => closeModal(dom.modalEditExp));
   if (dom.btnCancelEditExp) dom.btnCancelEditExp.addEventListener('click', () => closeModal(dom.modalEditExp));
   if (dom.btnSaveEditExp) dom.btnSaveEditExp.addEventListener('click', saveEditedExperience);
-
-  // Ações do Modal de Identidade Visual Ubuntu
-  const btnOpenIdentity = document.getElementById('btn-open-identity-modal');
-  const modalIdentity = document.getElementById('modal-visual-identity');
-  const btnCloseIdentity = document.getElementById('modal-identity-close');
-  if (btnOpenIdentity && modalIdentity) {
-    btnOpenIdentity.addEventListener('click', () => openModal(modalIdentity));
-  }
-  if (btnCloseIdentity && modalIdentity) {
-    btnCloseIdentity.addEventListener('click', () => closeModal(modalIdentity));
-  }
 
   // Wizard Step 4: Salvar Experiência
   if (dom.btnSaveExperience) {
@@ -519,6 +566,20 @@ function openEditExpModal(id) {
   dom.editExpTitle.value = exp.title || '';
   if (dom.editExpTitle) delete dom.editExpTitle.dataset.customized;
 
+  // Carregar logo da experiência no modal de edição
+  if (dom.editLogoPreview) {
+    dom.editLogoPreview.src = exp.customLogoUrl || '/assets/mascote_apagadinho.png';
+  }
+  if (dom.btnEditRemoveLogo) {
+    dom.btnEditRemoveLogo.style.display = exp.customLogoUrl ? 'inline-block' : 'none';
+  }
+  if (dom.editCustomLogoInput) {
+    dom.editCustomLogoInput.value = '';
+  }
+  if (dom.modalEditExp) {
+    delete dom.modalEditExp.dataset.removeLogo;
+  }
+
   openModal(dom.modalEditExp);
 }
 
@@ -537,6 +598,7 @@ async function saveEditedExperience() {
   dom.btnSaveEditExp.textContent = 'Salvando alterações...';
 
   try {
+    // 1. Atualizar metadados de texto
     const res = await fetch(`/api/experiences/${encodeURIComponent(id)}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -546,6 +608,26 @@ async function saveEditedExperience() {
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.error || 'Falha ao atualizar experiência.');
+    }
+
+    // 2. Se houver upload de nova logo ou remoção
+    const newLogoFile = dom.editCustomLogoInput && dom.editCustomLogoInput.files && dom.editCustomLogoInput.files[0];
+    const shouldRemoveLogo = dom.modalEditExp && dom.modalEditExp.dataset.removeLogo === 'true';
+
+    if (newLogoFile) {
+      const logoData = new FormData();
+      logoData.append('customLogo', newLogoFile);
+      await fetch(`/api/experiences/${encodeURIComponent(id)}/logo`, {
+        method: 'POST',
+        body: logoData
+      });
+    } else if (shouldRemoveLogo) {
+      const removeData = new FormData();
+      removeData.append('removeLogo', 'true');
+      await fetch(`/api/experiences/${encodeURIComponent(id)}/logo`, {
+        method: 'POST',
+        body: removeData
+      });
     }
 
     closeModal(dom.modalEditExp);
@@ -740,6 +822,11 @@ async function saveExperience() {
       formData.append('model3d', state.wizardData.model3dFile);
     }
 
+    // Logo personalizada opcional (imagem PNG/JPG)
+    if (state.wizardData.customLogoFile) {
+      formData.append('customLogo', state.wizardData.customLogoFile);
+    }
+
     const res = await fetch('/api/experiences', {
       method: 'POST',
       body: formData
@@ -814,7 +901,8 @@ function resetWizard() {
     fitMode: 'match',
     loop: true,
     audioDefault: 'muted',
-    model3dFile: null
+    model3dFile: null,
+    customLogoFile: null
   };
 
   // Reset inputs e previews
@@ -822,6 +910,10 @@ function resetWizard() {
   if (inputModel3d) inputModel3d.value = '';
   const previewModel3dInfo = document.getElementById('preview-model3d-info');
   if (previewModel3dInfo) previewModel3dInfo.style.display = 'none';
+
+  if (dom.inputCustomLogo) dom.inputCustomLogo.value = '';
+  if (dom.previewCustomLogoWrap) dom.previewCustomLogoWrap.style.display = 'none';
+  if (dom.previewCustomLogoThumb) dom.previewCustomLogoThumb.src = '';
 
   if (dom.inputImage) dom.inputImage.value = '';
   if (dom.inputVideo) dom.inputVideo.value = '';

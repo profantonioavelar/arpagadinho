@@ -341,7 +341,8 @@ const uploadMiddleware = upload.fields([
   { name: 'targetImage', maxCount: 1 },
   { name: 'overlayVideo', maxCount: 1 },
   { name: 'targetMind', maxCount: 1 },
-  { name: 'model3d', maxCount: 1 }
+  { name: 'model3d', maxCount: 1 },
+  { name: 'customLogo', maxCount: 1 }
 ]);
 
 const uploadFields = (req, res, next) => {
@@ -387,6 +388,7 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
     const overlayVideoFile = files.overlayVideo[0];
     const targetMindFile = files.targetMind[0];
     const model3dFile = files.model3d ? files.model3d[0] : null;
+    const customLogoFile = files.customLogo ? files.customLogo[0] : null;
 
     const width = parseFloat(targetWidth) || 1000;
     const height = parseFloat(targetHeight) || 1000;
@@ -396,22 +398,25 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
     let overlayVideoUrl = `/uploads/${expId}/${overlayVideoFile.filename}`;
     let mindTargetUrl = `/uploads/${expId}/${targetMindFile.filename}`;
     let model3dUrl = model3dFile ? `/uploads/${expId}/${model3dFile.filename}` : null;
+    let customLogoUrl = customLogoFile ? `/uploads/${expId}/${customLogoFile.filename}` : (req.body.customLogoUrl || null);
 
     let warningMessage = null;
 
     if (isCloudinaryEnabled()) {
       console.log(`[Cloudinary] Enviando arquivos de "${title}" (${expId}) para armazenamento permanente na nuvem...`);
       try {
-        const [cImg, cVid, cMind, cModel] = await Promise.all([
+        const [cImg, cVid, cMind, cModel, cLogo] = await Promise.all([
           uploadToCloudinary(targetImageFile.path, `arpagadinho/${expId}/image`, 'image'),
           uploadToCloudinary(overlayVideoFile.path, `arpagadinho/${expId}/video`, 'video'),
           uploadToCloudinary(targetMindFile.path, `arpagadinho/${expId}/targets`, 'raw'),
-          model3dFile ? uploadToCloudinary(model3dFile.path, `arpagadinho/${expId}/model`, 'raw') : Promise.resolve(null)
+          model3dFile ? uploadToCloudinary(model3dFile.path, `arpagadinho/${expId}/model`, 'raw') : Promise.resolve(null),
+          customLogoFile ? uploadToCloudinary(customLogoFile.path, `arpagadinho/${expId}/logo`, 'image') : Promise.resolve(null)
         ]);
         if (cImg) targetImageUrl = cImg;
         if (cVid) overlayVideoUrl = cVid;
         if (cMind) mindTargetUrl = cMind;
         if (cModel) model3dUrl = cModel;
+        if (cLogo) customLogoUrl = cLogo;
 
         // Se o Cloudinary estiver ativo e o vídeo por algum motivo não tiver retornado URL http, gerar a URL canônica garantida
         if (isCloudinaryEnabled() && !overlayVideoUrl.startsWith('http')) {
@@ -447,6 +452,7 @@ app.post('/api/experiences', requireAuthApi, uploadFields, async (req, res) => {
       mindTargetUrl,
       model3dUrl,
       model3dScale: model3dScale || '0.35 0.35 0.35',
+      customLogoUrl: customLogoUrl || null,
       chromaKey: chromaKey || 'none',
       backdropMode: backdropMode || 'none',
       targetWidth: width,
@@ -534,6 +540,10 @@ app.patch('/api/experiences/:id', requireAuthApi, (req, res) => {
 
   if (description !== undefined) exp.description = String(description).trim();
 
+  if (req.body.customLogoUrl !== undefined) {
+    exp.customLogoUrl = req.body.customLogoUrl ? String(req.body.customLogoUrl).trim() : null;
+  }
+
   saveExperiences(experiences);
 
   if (isCloudinaryEnabled()) {
@@ -541,6 +551,45 @@ app.patch('/api/experiences/:id', requireAuthApi, (req, res) => {
   }
 
   res.json({ success: true, experience: exp });
+});
+
+// Upload ou remoção direta de Logo de uma experiência existente
+app.post('/api/experiences/:id/logo', requireAuthApi, upload.single('customLogo'), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const experiences = getExperiences();
+    const exp = experiences.find(e => e.id === id);
+
+    if (!exp) {
+      return res.status(404).json({ error: 'Experiência não encontrada' });
+    }
+
+    if (req.file) {
+      let logoUrl = `/uploads/${id}/${req.file.filename}`;
+      if (isCloudinaryEnabled()) {
+        try {
+          const cLogo = await uploadToCloudinary(req.file.path, `arpagadinho/${id}/logo`, 'image');
+          if (cLogo) logoUrl = cLogo;
+        } catch (e) {
+          console.warn('Erro ao enviar logo para Cloudinary:', e.message);
+        }
+      }
+      exp.customLogoUrl = logoUrl;
+    } else if (req.body.removeLogo === 'true' || req.body.removeLogo === true) {
+      exp.customLogoUrl = null;
+    }
+
+    saveExperiences(experiences);
+
+    if (isCloudinaryEnabled()) {
+      syncDatabaseToCloudinary(experiences).catch(e => console.warn(e));
+    }
+
+    res.json({ success: true, customLogoUrl: exp.customLogoUrl, experience: exp });
+  } catch (err) {
+    console.error('Erro ao atualizar logo:', err);
+    res.status(500).json({ error: 'Erro ao atualizar logo: ' + err.message });
+  }
 });
 
 // Gerar QR Code para uma experiência

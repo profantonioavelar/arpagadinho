@@ -166,6 +166,13 @@ const ui = {
   modalClose: document.getElementById('modal-artwork-close'),
   errorOverlay: document.getElementById('error-overlay'),
   errorMessage: document.getElementById('error-message'),
+  // Tela de Carregamento Imersiva com Logo Customizada
+  loadingScreen: document.getElementById('webar-loading-screen'),
+  loadingLogoImg: document.getElementById('loading-logo-img'),
+  loadingTitle: document.getElementById('loading-title'),
+  loadingStudent: document.getElementById('loading-student'),
+  loadingStatusMsg: document.getElementById('loading-status-msg'),
+  mascotImg: document.getElementById('webar-mascot-img'),
   // Captura & Mídia
   btnTakePhoto: document.getElementById('btn-take-photo'),
   btnRecordVideo: document.getElementById('btn-record-video'),
@@ -180,6 +187,18 @@ const ui = {
   btnShareMedia: document.getElementById('btn-share-media'),
   btnRetakeMedia: document.getElementById('btn-retake-media')
 };
+
+// ==========================================================================
+// Controle da Tela de Carregamento
+// ==========================================================================
+function hideLoadingScreen() {
+  if (ui.loadingScreen && !ui.loadingScreen.classList.contains('fade-out')) {
+    ui.loadingScreen.classList.add('fade-out');
+    setTimeout(() => {
+      ui.loadingScreen.style.display = 'none';
+    }, 650);
+  }
+}
 
 // ==========================================================================
 // Helpers de Extração e Ajuste de Retículo
@@ -255,9 +274,16 @@ async function initViewer() {
     const exp = await res.json();
     viewerState.experience = exp;
 
+    // Atualizar Logo dinâmica da experiência (customizada ou mascote Apagadinho padrão)
+    const activeLogo = exp.customLogoUrl || '/assets/mascote_apagadinho.png';
+    if (ui.loadingLogoImg) ui.loadingLogoImg.src = activeLogo;
+    if (ui.mascotImg) ui.mascotImg.src = activeLogo;
+
     // Atualizar UI com Nome do Estudante e Sala da EMJPa
     const { name, room } = extractStudentInfo(exp);
     if (ui.studentName) ui.studentName.textContent = name;
+    if (ui.loadingTitle) ui.loadingTitle.textContent = exp.title || 'Realidade Aumentada';
+    if (ui.loadingStudent) ui.loadingStudent.textContent = room ? `${name} • ${room}` : name;
     const roomDivider = document.getElementById('student-room-divider');
     if (ui.studentRoom) {
       if (room) {
@@ -485,6 +511,17 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
     console.log('[WebAR] Cena A-Frame iniciada.');
   });
 
+  // Evento: MindAR inicializou a câmera e compilou os shaders (Câmera pronta!)
+  sceneEl.addEventListener('arReady', () => {
+    console.log('[WebAR] ✓ MindAR arReady disparado! Câmera e rastreamento prontos.');
+    hideLoadingScreen();
+  });
+
+  // Timeout de segurança caso arReady demore ou já tenha sido disparado
+  setTimeout(() => {
+    hideLoadingScreen();
+  }, 3800);
+
   // Evento: Marcador detectado pela câmera
   targetEntity.addEventListener('targetFound', () => {
     console.log('[WebAR] 🎯 Marcador encontrado!');
@@ -549,6 +586,7 @@ function setupMindArEvents(sceneEl, targetEntity, videoEl) {
 
   sceneEl.addEventListener('arError', (e) => {
     console.error('[WebAR] Erro de AR:', e);
+    hideLoadingScreen();
     showError('Não foi possível acessar a câmera. Verifique as permissões do navegador e se a conexão é segura (HTTPS).');
   });
 }

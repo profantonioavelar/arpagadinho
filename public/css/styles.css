@@ -689,6 +689,144 @@ body {
 }
 
 /* ==========================================================================
+   Tela de Carregamento Imersiva (WebAR Loading Screen)
+   ========================================================================== */
+.webar-loading-screen {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 9999;
+  background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #020617 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.6s ease;
+  overflow: hidden;
+}
+
+.webar-loading-screen.fade-out {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  max-width: 360px;
+  width: 100%;
+}
+
+.loading-logo-halo {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.loading-glow-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #ec4899, #a855f7, #6366f1, #38bdf8, #ec4899);
+  animation: spinGlow 4s linear infinite;
+  filter: blur(10px);
+  opacity: 0.75;
+}
+
+@keyframes spinGlow {
+  to { transform: rotate(360deg); }
+}
+
+.loading-logo-img {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  object-fit: contain;
+  background: #ffffff;
+  border-radius: 50%;
+  padding: 8px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
+  z-index: 2;
+  animation: logoFloat 2.8s ease-in-out infinite;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-6px) scale(1.03); }
+}
+
+.loading-info-box {
+  margin-bottom: 1.75rem;
+}
+
+.loading-project-tag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fbbf24;
+  margin-bottom: 0.45rem;
+}
+
+.loading-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.35rem 0;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.loading-student {
+  font-size: 0.9rem;
+  color: #d8b4fe;
+  font-weight: 700;
+}
+
+.loading-progress-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 0.6rem 1.25rem;
+  border-radius: 999px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  margin-bottom: 1.5rem;
+}
+
+.loading-spinner-ring {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(168, 85, 247, 0.25);
+  border-top-color: #a855f7;
+  border-radius: 50%;
+  animation: spinGlow 0.8s linear infinite;
+}
+
+.loading-status-msg {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.loading-tip {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  max-width: 290px;
+  line-height: 1.45;
+}
+
+/* ==========================================================================
    WebAR Viewer Styles (view.html)
    ========================================================================== */
 .webar-container {
@@ -778,31 +916,14 @@ body {
   color: #fbbf24;
 }
 
-.webar-emblem-duo {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  background: rgba(255, 255, 255, 0.1);
-  padding: 2px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(251, 191, 36, 0.35);
-}
-
 .webar-mascot-img {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  filter: drop-shadow(0 0 4px rgba(251, 191, 36, 0.6));
-}
-
-.webar-ubuntu-img {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
   background: #ffffff;
   border-radius: 50%;
   padding: 1.5px;
-  box-shadow: 0 0 6px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.45);
 }
 
 /* Linha 2: Nome do estudante, a sala */

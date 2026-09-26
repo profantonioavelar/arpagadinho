@@ -28,8 +28,8 @@
   <div class="print-card-box">
     <div class="print-header">
       <div style="display: flex; align-items: center; justify-content: center; gap: 0.85rem; margin-bottom: 0.35rem; flex-wrap: wrap;">
-        <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 44px; height: 44px; object-fit: contain;" title="Apagadinho">
-        <img src="/assets/logo_ubuntu.png" alt="Projeto Ubuntu" style="max-height: 48px; width: auto; object-fit: contain;" title="Projeto Ubuntu - Escola Municipal Júlia Paraíso">
+        <img id="card-mascot-img" src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 44px; height: 44px; object-fit: contain;" title="Apagadinho">
+        <img id="card-custom-logo" src="/assets/logo_ubuntu.png" alt="Logo" style="max-height: 48px; width: auto; object-fit: contain; display: none;">
         <span style="font-size: 0.72rem; font-weight: 700; background: #1e3a8a; color: #ffffff; padding: 0.2rem 0.55rem; border-radius: 4px; letter-spacing: 0.04em;">EMJPa • 2026</span>
       </div>
       <h1 id="card-title" style="font-size: 1.5rem; font-weight: 800; color: #0f172a; margin: 0.25rem 0;">Carregando Experiência...</h1>
@@ -90,6 +90,16 @@
         document.getElementById('card-art-img').src = exp.targetImageUrl;
         document.getElementById('card-qr-img').src = qr.qrDataUrl;
         document.getElementById('btn-view-ar').href = `/view.html?id=${encodeURIComponent(id)}`;
+
+        const customLogoEl = document.getElementById('card-custom-logo');
+        if (customLogoEl) {
+          if (exp.customLogoUrl) {
+            customLogoEl.src = exp.customLogoUrl;
+            customLogoEl.style.display = 'inline-block';
+          } else {
+            customLogoEl.style.display = 'none';
+          }
+        }
       } catch (err) {
         console.error(err);
         document.getElementById('card-title').textContent = 'Erro ao carregar dados';

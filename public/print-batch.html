@@ -533,7 +533,7 @@
           <div class="card-top-row">
             <div style="display: flex; align-items: center; gap: 8px;">
               <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 32px; height: 32px; object-fit: contain;">
-              <img src="/assets/simbolo_ubuntu.png" alt="Ubuntu" style="width: 28px; height: 28px; object-fit: contain;">
+              ${item.customLogoUrl ? `<img src="${escapeHtml(item.customLogoUrl)}" alt="Logo" style="width: 28px; height: 28px; object-fit: contain; border-radius: 50%; background: #ffffff; padding: 2px; box-shadow: 0 1px 4px rgba(0,0,0,0.2);">` : ''}
               <div class="card-title-group">
                 <div class="card-expo-title">${escapeHtml(printData.expoName || 'Projeto UBUNTU')}</div>
                 <div class="card-school-year">${escapeHtml(printData.schoolName || 'EMJPa - 2026')}</div>

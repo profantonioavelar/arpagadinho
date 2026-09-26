@@ -29,11 +29,10 @@
     <a href="/studio.html" class="brand">
       <div style="display: flex; align-items: center; gap: 0.5rem;">
         <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 44px; height: 44px; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(236,72,153,0.5));" title="Apagadinho - Mascote da Lousa Virtual">
-        <img src="/assets/simbolo_ubuntu.png" alt="Projeto Ubuntu" style="width: 38px; height: 38px; object-fit: contain; background: #ffffff; border-radius: 50%; padding: 2px; box-shadow: 0 2px 8px rgba(0,0,0,0.35);" title="Projeto Ubuntu - Escola Municipal Júlia Paraíso">
       </div>
       <div>
         <span class="brand-text">ARpagadinho Estúdio</span>
-        <span class="brand-badge" style="background: linear-gradient(135deg, #1e3a8a, #d97706); color: #fff; font-weight: 700;">Projeto UBUNTU • EMJPa</span>
+        <span class="brand-badge" style="background: linear-gradient(135deg, #ec4899, #8b5cf6); color: #fff; font-weight: 700;">WebAR Escolar</span>
       </div>
     </a>
 
@@ -42,10 +41,6 @@
         <span class="pulse-dot"></span>
         <span>Conectando...</span>
       </div>
-
-      <button id="btn-open-identity-modal" class="btn btn-secondary" style="font-size: 0.8rem; padding: 0.55rem 0.85rem;" title="Ver Identidade Visual e Paleta Oficial do Projeto UBUNTU">
-        <span>🎨 Identidade Visual</span>
-      </button>
 
       <a href="/" target="_blank" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.55rem 0.9rem;" title="Abrir portal da mostra dos pais em nova aba">
         <span>👁️ Ver Mostra dos Pais</span>
@@ -500,6 +495,24 @@
             </div>
           </div>
 
+          <!-- Campo Opcional: Logo / Emblema da Experiência (Tela de Carregamento) -->
+          <div class="form-group" style="background: rgba(236, 72, 153, 0.08); border: 1px dashed rgba(236, 72, 153, 0.4); border-radius: var(--radius-md); padding: 1rem; margin-top: 1.25rem;">
+            <label class="form-label" for="input-custom-logo" style="display: flex; align-items: center; justify-content: space-between; color: #f472b6;">
+              <span style="font-weight: 700;">🏷️ Logo / Emblema da Experiência — Opcional</span>
+              <span style="font-size: 0.72rem; background: rgba(236, 72, 153, 0.2); color: #f472b6; padding: 2px 8px; border-radius: 9999px; font-weight: 700;">Tela de Carregamento</span>
+            </label>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.75rem; line-height: 1.4;">
+              Adicione a logomarca do seu projeto, escola ou turma (PNG/JPG). Ela aparecerá em destaque na <strong>tela de carregamento</strong> do WebAR enquanto a câmera inicializa! Se não adicionar nada, o mascote Apagadinho será usado por padrão.
+            </p>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <input type="file" id="input-custom-logo" accept="image/*" class="form-input" style="font-size: 0.88rem; padding: 0.5rem 0.75rem; cursor: pointer; flex: 1;">
+              <div id="preview-custom-logo-wrap" style="display: none; align-items: center; gap: 0.5rem;">
+                <img id="preview-custom-logo-thumb" src="" alt="Logo Prévia" style="width: 38px; height: 38px; object-fit: contain; border-radius: 50%; border: 2px solid #ec4899; background: #0f172a; padding: 2px;">
+                <button type="button" id="btn-remove-custom-logo" class="btn btn-sm" style="background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.35rem 0.6rem;" title="Remover logo selecionada">✕</button>
+              </div>
+            </div>
+          </div>
+
           <div class="form-group" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 1rem;">
             <input type="checkbox" id="check-loop" checked style="width: 18px; height: 18px; accent-color: var(--primary);">
             <label for="check-loop" style="font-size: 0.9rem; cursor: pointer;">Repetir vídeo continuamente em loop</label>
@@ -734,40 +747,32 @@
           <label class="form-label" for="edit-exp-title">Título Completo na Exposição</label>
           <input type="text" id="edit-exp-title" class="form-input" placeholder="Ex: Gata - Sala 12">
         </div>
+
+        <!-- Logo / Emblema da Experiência (Tela de Carregamento) -->
+        <div class="form-group" style="margin-top: 1.25rem; border-top: 1px solid var(--border-subtle); padding-top: 1rem;">
+          <label class="form-label" style="display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-weight: 700; color: #f472b6;">🏷️ Logo da Tela de Carregamento</span>
+            <span style="font-size: 0.75rem; color: var(--text-muted);">(Opcional)</span>
+          </label>
+          <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+            Aparece na tela de carregamento do WebAR. Se não houver, o mascote Apagadinho será usado.
+          </p>
+          <div style="display: flex; align-items: center; gap: 0.85rem;">
+            <img id="edit-logo-preview" src="/assets/mascote_apagadinho.png" alt="Logo Atual" style="width: 44px; height: 44px; object-fit: contain; border-radius: 50%; border: 2px solid var(--border-accent); background: #0f172a; padding: 2px;">
+            <div style="flex: 1;">
+              <input type="file" id="edit-custom-logo-input" accept="image/*" class="form-input" style="font-size: 0.8rem; padding: 0.45rem 0.6rem; cursor: pointer;">
+              <div style="margin-top: 0.4rem; display: flex; align-items: center; gap: 0.5rem;">
+                <button type="button" id="btn-edit-remove-logo" class="btn btn-sm" style="display: none; background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                  🗑️ Remover logo personalizada (usar Apagadinho)
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div style="margin-top: 1.5rem; display: flex; justify-content: flex-end; gap: 0.75rem;">
           <button type="button" id="btn-cancel-edit-exp" class="btn btn-secondary">Cancelar</button>
           <button type="button" id="btn-save-edit-exp" class="btn btn-primary">✓ Salvar Alterações</button>
-        </div>
-      </div>
-    </div>
-  <!-- Modal: Identidade Visual Oficial do Projeto UBUNTU -->
-  <div id="modal-visual-identity" class="modal-overlay">
-    <div class="modal-content" style="max-width: 860px;">
-      <div class="modal-header">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-          <img src="/assets/mascote_apagadinho.png" alt="Apagadinho" style="width: 32px; height: 32px; object-fit: contain;">
-          <img src="/assets/simbolo_ubuntu.png" alt="Ubuntu" style="width: 30px; height: 30px; object-fit: contain; background: #ffffff; border-radius: 50%; padding: 2px;">
-          <h3 class="modal-title">Identidade Visual Oficial — Projeto UBUNTU</h3>
-        </div>
-        <button id="modal-identity-close" class="modal-close" aria-label="Fechar">
-          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
-      </div>
-      <div class="modal-body" style="text-align: center;">
-        <img src="/assets/identidade_visual_ubuntu.png" alt="Identidade Visual Projeto UBUNTU" style="max-width: 100%; height: auto; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.4); margin-bottom: 1rem;">
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; text-align: left; background: rgba(15, 23, 42, 0.7); padding: 1rem; border-radius: 10px; font-size: 0.85rem; border: 1px solid var(--border-subtle);">
-          <div>
-            <strong style="color: #60a5fa; display: block; margin-bottom: 0.2rem;">🌳 Símbolo (Árvore Comunitária JP):</strong>
-            <p style="color: var(--text-muted); margin: 0; line-height: 1.45;">As pessoas entrelaçadas formam a copa da árvore, unindo a comunidade à Escola Municipal Júlia Paraíso.</p>
-          </div>
-          <div>
-            <strong style="color: #fbbf24; display: block; margin-bottom: 0.2rem;">🎨 Paleta Oficial:</strong>
-            <p style="color: var(--text-muted); margin: 0; line-height: 1.45;">Azul Profundo (#1b497d), Amarelo Ouro (#f5bf23), Laranja Solar (#e8743b) e Verde Água (#72bcae).</p>
-          </div>
-          <div>
-            <strong style="color: #34d399; display: block; margin-bottom: 0.2rem;">🤝 Lema Ubuntu:</strong>
-            <p style="color: var(--text-muted); margin: 0; line-height: 1.45;"><em>"Eu sou porque nós somos" (I am because we are)</em>.</p>
-          </div>
         </div>
       </div>
     </div>
